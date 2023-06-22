@@ -32,6 +32,21 @@ jobs:
         java: [temurin@11]
         project: [rootJS, rootJVM]
     runs-on: ${{ matrix.os }}
+    services:
+      postgres:
+        image: postgres
+        env:
+          # Config must match Reset.scala
+          POSTGRES_DB: skunk
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: Supersecret1
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - name: Checkout current branch (full)
         uses: actions/checkout@v3

@@ -77,7 +77,7 @@ object Reset:
       host = "localhost",
       port = 5432,
       user = "postgres",
-      database = "ratio",
+      database = "skunk",
       password = Some("Supersecret1"),
       strategy = Typer.Strategy.SearchPath,
       max = 2
