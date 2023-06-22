@@ -5,7 +5,7 @@
 ## Why
 
 It's a somewhat common sentiment in Scala community that ORM/FRM libraries do not add much value and nothing beats plain SQL queries at their simplicity.
-Skunk and Doobie libraries are champions in the plain-SQL competition and we love them very much and want to use everywhere.
+[Skunk](https://github.com/tpolecat/skunk/) and [Doobie](https://github.com/tpolecat/doobie) libraries are champions in the plain-SQL competition and we love them very much and want to use everywhere.
 However, sometimes we need to write a lot of boilerplate SQL with decoders and Scala's type system doesn't prevent anyone from writing non-sense in there,
 especially on first stages of the app when we prototype and change things like tables, classes and columns very often.
 
@@ -13,6 +13,8 @@ especially on first stages of the app when we prototype and change things like t
 It's not a replacement of Skunk, but an addition to it, allowing to reduce the boilerplate AND add some common source of truth for your SQL fragments.
 
 ## Overview
+
+The library is...
 
 * Type-safe. `skunk-tables` attempts to forbid many non-sense operations, such as `OFFSET` for `INSERT` statements or accessing non-existing columns. If you see string literals somewhere - they're likely type-checked.
 * Standing on shoulders of giants and scratching the boilerplate. Skunk Tables is based on Skunk, but does not try to replace it. Instead, it uses
@@ -22,7 +24,7 @@ It's not a replacement of Skunk, but an addition to it, allowing to reduce the b
 
 ## Note about stablity and Roadmap
 
-Skunk tables is at it's 0.0.x stage.
+`skunk-tables` is at its 0.0.x stage. The API will change a lot and everyone is welcome to explore what we can do here.
 
 Next steps:
 
@@ -33,7 +35,11 @@ Next steps:
 
 ## Limitations
 
-Skunk Tables heavily uses Scala 3 macro system and hence will never be available on Scala 2.
+### Scala 3
+
+`skunk-tables` heavily uses Scala 3 macro system and hence will never be available on Scala 2.
+
+### Type annotations
 
 It's generally a bad idea to annotate anything coming from the library with its types, for example:
 
@@ -92,7 +98,9 @@ session.use(count.run)
 
 ### Low-level API
 
-## API
+`Table` object is cool not only because it provides short-hand methods like `get` and `insert`, but also because it adds
+a source of truth for the actual PostgreSQL table. You can pull out things like table name, column names, column operations
+for custom complex SQL fragments:
 
 ```scala
 val P = Person.table        // Just a short-hand
@@ -111,3 +119,5 @@ SELECT id, first_name, last_name
 FROM persons
 WHERE age = ${int4}
 ```
+
+If you change your class (e.g. field name or type) you also must change your query or it won't compile.
