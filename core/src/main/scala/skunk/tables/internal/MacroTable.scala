@@ -25,9 +25,8 @@ import quotidian.{MacroMirror, MirrorElem}
 
 import skunk.tables.{IsColumn, TypedColumn}
 
-/** MacroTable is a class containing all information necessary for `Table`
-  * synthezis. It can be of two phases, depending on how much information we
-  * have about type `A`
+/** MacroTable is a class containing all information necessary for `Table` synthezis. It can be of
+  * two phases, depending on how much information we have about type `A`
   */
 sealed trait MacroTable[Q <: Quotes & Singleton, A]:
   val quotes: Q
@@ -39,8 +38,7 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
   /** User-provided type of table contents */
   def tpe: Type[A]
 
-  def columnMap
-      : NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))]
+  def columnMap: NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))]
 
   def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]]
 
@@ -60,9 +58,7 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
               ConstantType(StringConstant(b))
             )
           )
-          .apply((orType, name) =>
-            OrType(orType, ConstantType(StringConstant(name)))
-          )
+          .apply((orType, name) => OrType(orType, ConstantType(StringConstant(name))))
       case NonEmptyList(a, Nil) =>
         ConstantType(StringConstant(a))
 
@@ -70,8 +66,8 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
   def getNamesTuple: Expr[Tuple] =
     Expr.ofTupleFromSeq(getNames.toList.map(name => Expr(name)))
 
-  /** Get ordered tuple of all columns as `TypedColumn` Note: it creates only
-    * values here, types for `Columns` created there within refinement
+  /** Get ordered tuple of all columns as `TypedColumn` Note: it creates only values here, types for
+    * `Columns` created there within refinement
     */
   def getTypedColumns: Expr[Tuple] =
     Expr.ofTupleFromSeq(getTypedColumnsList)
@@ -89,8 +85,7 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
 
 object MacroTable:
 
-  /** Init phase is when `TableBuilder` knows only information derived from `A`
-    * type
+  /** Init phase is when `TableBuilder` knows only information derived from `A` type
     */
   class InitPhase[Q <: Quotes & Singleton, A](
       val quotes: Q,
@@ -124,8 +119,7 @@ object MacroTable:
             }
       }
 
-  /** Final phase is when `TableBuilder` went through its methods and got more
-    * information from user
+  /** Final phase is when `TableBuilder` went through its methods and got more information from user
     */
   class FinalPhase[Q <: Quotes & Singleton, A](
       val quotes: Q,
@@ -184,9 +178,7 @@ object MacroTable:
     val mirror = MacroMirror.summonProduct[T]
 
     val columnMap = NonEmptyList.fromList(
-      flattenProduct[T](Nil)(mirror.elems).map((path, tpe) =>
-        snakeCase(path.last) -> tpe
-      )
+      flattenProduct[T](Nil)(mirror.elems).map((path, tpe) => snakeCase(path.last) -> tpe)
     ) match
       case Some(nel) => nel
       case None =>

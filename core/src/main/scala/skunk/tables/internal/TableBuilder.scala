@@ -20,11 +20,10 @@ import scala.quoted.*
 
 import skunk.tables.{TypedColumn, Table, ColumnSelect, Dissect}
 
-/** A factory, providing set of configuration methods, such as `withUnique`,
-  * `withName` to configure the actual table
+/** A factory, providing set of configuration methods, such as `withUnique`, `withName` to configure
+  * the actual table
   *
-  * The class itself supposed to be internal. Most members exist only at
-  * type-level
+  * The class itself supposed to be internal. Most members exist only at type-level
   */
 trait TableBuilder[T <: Product]:
   self =>

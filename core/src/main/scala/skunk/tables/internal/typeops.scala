@@ -33,7 +33,7 @@ type TwiddleTC[C <: Tuple] =
     // Below returns single item, not a tuple, which allows us to do `returning["id" *: EmptyTuple]`
     // and get a single value, not a whole tuple. Might be unexpected
     case TypedColumn[?, b, ?, ?] *: EmptyTuple => b
-    case TypedColumn[?, b1, ?, ?] *: tail => b1 ~ TwiddleTCGo[tail, EmptyTuple]
+    case TypedColumn[?, b1, ?, ?] *: tail      => b1 ~ TwiddleTCGo[tail, EmptyTuple]
 type TwiddleTCGo[C <: NonEmptyTuple, A <: Tuple] =
   (C, A) match
     case (TypedColumn[?, b, ?, ?] *: EmptyTuple, EmptyTuple) => b
@@ -171,10 +171,10 @@ inline def getNamesT[C <: Tuple]: GetNames[C] =
 type GetInNames[I <: NonEmptyTuple] <: NonEmptyTuple =
   I match
     case TypedColumn.In[IsSingleton[n], ?, ?] *: EmptyTuple => n *: EmptyTuple
-    case TypedColumn.In[IsSingleton[n], ?, ?] *: t => n *: GetInNames[t]
+    case TypedColumn.In[IsSingleton[n], ?, ?] *: t          => n *: GetInNames[t]
 
-/** Match type to transform `(a, b, c, d)` of `TypedColumn.In` into `(((a, b),
-  * c), d)` (or `a ~ b ~ c ~ d`)
+/** Match type to transform `(a, b, c, d)` of `TypedColumn.In` into `(((a, b), c), d)` (or `a ~ b ~
+  * c ~ d`)
   */
 type TwiddleIn[I <: NonEmptyTuple] =
   I match

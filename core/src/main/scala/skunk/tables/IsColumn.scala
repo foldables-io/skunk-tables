@@ -31,8 +31,7 @@ import skunk.Codec
 import skunk.codec.all.*
 import skunk.circe.codec.json.json
 
-/** Type class declaring that a type must be represented as a single column in
-  * `Table`
+/** Type class declaring that a type must be represented as a single column in `Table`
   */
 trait IsColumn[A]:
   def codec: Codec[A]
@@ -54,9 +53,7 @@ object IsColumn:
       inline constraint: Constraint[A, B]
   ): IsColumn[A :| B] =
     val codec: Codec[A :| B] =
-      members.codec.eimap(a => a.refineEither[B])((s: A :| B) =>
-        s.asInstanceOf[A]
-      )
+      members.codec.eimap(a => a.refineEither[B])((s: A :| B) => s.asInstanceOf[A])
     IsColumn[A :| B](codec)
 
   inline given [B <: Int](using

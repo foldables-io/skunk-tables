@@ -39,8 +39,7 @@ abstract sealed class MacroDissect[Q <: Quotes & Singleton](val quotes: Q):
   /** A function that can transform `out` to `in` */
   def construct: quotes.reflect.Term
 
-  /** A "twiddled" version of `out`, where items grouped in paris, e.g.
-    * (((1,2),3),4)
+  /** A "twiddled" version of `out`, where items grouped in paris, e.g. (((1,2),3),4)
     */
   def twiddled: quotes.reflect.TypeRepr
 
@@ -72,8 +71,8 @@ object MacroDissect:
   /** A `Product` type that contains primtive types, leafs and other branches */
   abstract class Branch[Q <: Quotes & Singleton](override val quotes: Q)
       extends MacroDissect[Q](quotes):
-    /** Unlike `construct` this `Term` represents real constructor, not
-      * destructured, i.e. transforms `outTupled` to `in`
+    /** Unlike `construct` this `Term` represents real constructor, not destructured, i.e.
+      * transforms `outTupled` to `in`
       */
     def constructTupled: quotes.reflect.Term
 
@@ -302,20 +301,20 @@ object MacroDissect:
 
         f.asTerm
 
-  /** A function producing a list of functions that if applied sequentially, can
-    * transform a flat tuple of `(1,2,3,4,5,6)` into a nested/tree structure of
-    * original hierarchy, `A(1, B(2,3), C(4, D(5,6)))`.
+  /** A function producing a list of functions that if applied sequentially, can transform a flat
+    * tuple of `(1,2,3,4,5,6)` into a nested/tree structure of original hierarchy, `A(1, B(2,3),
+    * C(4, D(5,6)))`.
     *
-    * Its flow depends on [[nested]] to decide what transformation to apply to
-    * every element. It has three cases:
-    *   - If element is primtive (no `Dissect`) - apply no transformation, so
-    *     `(1,2,3)` remains `(1,2,3)`
-    *   - If element is a `Leaf` (a `Product` that itself contains only
-    *     primitives) - apply a constructor to `n` element (`n` = arity) and
-    *     drop `n` elements, so `(1,2,3)` turns into `(1,A(2,3))`
-    *   - If element if a `Branch` (a `Product` with `Leaf`s/primtives) - first
-    *     recurse into its `nested` structure and flatten everything there, then
-    *     once it's ready - apply `Branch`'s constructor
+    * Its flow depends on [[nested]] to decide what transformation to apply to every element. It has
+    * three cases:
+    *   - If element is primtive (no `Dissect`) - apply no transformation, so `(1,2,3)` remains
+    *     `(1,2,3)`
+    *   - If element is a `Leaf` (a `Product` that itself contains only primitives) - apply a
+    *     constructor to `n` element (`n` = arity) and drop `n` elements, so `(1,2,3)` turns into
+    *     `(1,A(2,3))`
+    *   - If element if a `Branch` (a `Product` with `Leaf`s/primtives) - first recurse into its
+    *     `nested` structure and flatten everything there, then once it's ready - apply `Branch`'s
+    *     constructor
     */
   private def flatten(using
       quote: Quotes

@@ -85,18 +85,17 @@ class TableSuite extends CatsEffectSuite:
     val expected =
       List(PersonWithMeta(Meta(1, staticTime), PersonInfo("Anton", 35)))
 
-    val result: IO[List[TableSuite.PersonWithMeta]] = Reset.getClean.use {
-      session =>
-        TableSuite.tableWithMeta
-          .insert[IO, TableSuite.PersonNew](
-            TableSuite.PersonNew(1, "Anton", 35)
-          )
-          .run(session) *>
-          TableSuite.tableWithMeta.all
-            .run(session)
-            .map(x => x.copy(meta = x.meta.copy(createdAt = staticTime)))
-            .compile
-            .toList
+    val result: IO[List[TableSuite.PersonWithMeta]] = Reset.getClean.use { session =>
+      TableSuite.tableWithMeta
+        .insert[IO, TableSuite.PersonNew](
+          TableSuite.PersonNew(1, "Anton", 35)
+        )
+        .run(session) *>
+        TableSuite.tableWithMeta.all
+          .run(session)
+          .map(x => x.copy(meta = x.meta.copy(createdAt = staticTime)))
+          .compile
+          .toList
     }
 
     assertIO(result, expected)

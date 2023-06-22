@@ -19,11 +19,11 @@ ThisBuild / tlSitePublishBranch := Some("main")
 ThisBuild / scalaVersion := "3.3.0"
 
 // Versions
-lazy val skunk     = "0.6.0"
-lazy val iron      = "2.1.0"
+lazy val skunk = "0.6.0"
+lazy val iron = "2.1.0"
 lazy val quotidian = "0.0.6"
-lazy val munit     = "0.7.29"
-lazy val munitCE   = "1.0.7"
+lazy val munit = "0.7.29"
+lazy val munitCE = "1.0.7"
 
 lazy val root = tlCrossRootProject.aggregate(core)
 
@@ -33,16 +33,13 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
   .settings(
     name := "skunk-tables",
     libraryDependencies ++= Seq(
-      "org.tpolecat"                %% "skunk-core"          % skunk,
-      "org.tpolecat"                %% "skunk-circe"         % skunk,
-
-      "io.github.iltotore"          %% "iron"                % iron,
-      "io.github.iltotore"          %% "iron-circe"          % iron,
-
-      "io.github.kitlangton"        %% "quotidian"           % quotidian,
-
-      "org.scalameta"               %% "munit"               % munit           % Test,
-      "org.typelevel"               %% "munit-cats-effect-3" % munitCE         % Test
+      "org.tpolecat" %% "skunk-core" % skunk,
+      "org.tpolecat" %% "skunk-circe" % skunk,
+      "io.github.iltotore" %% "iron" % iron,
+      "io.github.iltotore" %% "iron-circe" % iron,
+      "io.github.kitlangton" %% "quotidian" % quotidian,
+      "org.scalameta" %% "munit" % munit % Test,
+      "org.typelevel" %% "munit-cats-effect-3" % munitCE % Test
     )
   )
 

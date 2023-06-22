@@ -20,26 +20,25 @@ import scala.quoted.*
 
 import skunk.tables.internal.MacroTable
 
-/** `Columns` is a "selectable" trait, which means the members of it are created
-  * dynamically at compile-time. Every member maps a member of case class (`T`
-  * param from `Table[T]`) into a Postgres column, also preservin the type
-  * information.
+/** `Columns` is a "selectable" trait, which means the members of it are created dynamically at
+  * compile-time. Every member maps a member of case class (`T` param from `Table[T]`) into a
+  * Postgres column, also preservin the type information.
   *
-  * It's typically created as part of `Table` and used in its API, but nothing
-  * stops you from accessing typed columns of `table.columns` directly
+  * It's typically created as part of `Table` and used in its API, but nothing stops you from
+  * accessing typed columns of `table.columns` directly
   */
 trait ColumnSelect extends Selectable:
 
   /** Homongenous tuple of `TypedColumn` */
   type TypedColumns <: NonEmptyTuple
 
-  /** A tuple of `TypedColumn`. The actual type is inferred dur synthesis `all`
-    * is reserved word in Postgres, so should not cause collisions
+  /** A tuple of `TypedColumn`. The actual type is inferred dur synthesis `all` is reserved word in
+    * Postgres, so should not cause collisions
     */
   def all: TypedColumns
 
-  /** A list of `TypedColumn`. Used as a shortcur only `get` is reserved word in
-    * Postgres, so should not cause collisions
+  /** A list of `TypedColumn`. Used as a shortcur only `get` is reserved word in Postgres, so should
+    * not cause collisions
     */
   def get: List[TypedColumn[?, ?, ?, ?]] =
     all.toList.asInstanceOf[List[TypedColumn[?, ?, ?, ?]]]

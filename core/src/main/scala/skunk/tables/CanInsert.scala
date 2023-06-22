@@ -25,28 +25,25 @@ import skunk.implicits.*
 
 import skunk.tables.internal.{AllRequired, TwiddleIn, GetInNames}
 
-/** `CanInsert` is an evidence that a value of type `A` can be inserted into
-  * `Table[T]` In nutshell it's a mapping from members of `A` into columns of
-  * `Table[T]`. `A` can have more members than `Table[T]` columns, but every
-  * non-nullable, non-default member of `Table[T]` must have a counterpart in
-  * `A`
+/** `CanInsert` is an evidence that a value of type `A` can be inserted into `Table[T]` In nutshell
+  * it's a mapping from members of `A` into columns of `Table[T]`. `A` can have more members than
+  * `Table[T]` columns, but every non-nullable, non-default member of `Table[T]` must have a
+  * counterpart in `A`
   *
-  * It exists to handle different scenarios, where table has `DEFAULT` or `NULL`
-  * columns and we need to reliably map class members to their respective
-  * columns. Each table can have multiple user-defined instances of `CanInsert`
-  * for different classes
+  * It exists to handle different scenarios, where table has `DEFAULT` or `NULL` columns and we need
+  * to reliably map class members to their respective columns. Each table can have multiple
+  * user-defined instances of `CanInsert` for different classes
   */
 trait CanInsert[A, T]:
 
-  /** Tuple (a twiddled list to be precise) of elements `A` (not necessarily
-    * isomorphic to `A` or `T`)
+  /** Tuple (a twiddled list to be precise) of elements `A` (not necessarily isomorphic to `A` or
+    * `T`)
     */
   type Twiddled
 
-  /** List of columns of `A` that this instance can fulfill. Used in `INSERT`
-    * statement Order of columns does NOT represent order of members of `A`, nor
-    * columns of `T` It matches to order of `Twiddled`, which is specified by
-    * `via` contructor function
+  /** List of columns of `A` that this instance can fulfill. Used in `INSERT` statement Order of
+    * columns does NOT represent order of members of `A`, nor columns of `T` It matches to order of
+    * `Twiddled`, which is specified by `via` contructor function
     */
   def columns: List[String]
 
@@ -55,8 +52,8 @@ trait CanInsert[A, T]:
 
   def encoder: Encoder[Twiddled]
 
-  /** Every time we insert `a` into a table we need to transform it into a
-    * twiddle list, ordered for `columns`
+  /** Every time we insert `a` into a table we need to transform it into a twiddle list, ordered for
+    * `columns`
     */
   def transform(a: A): Twiddled
 
@@ -83,12 +80,11 @@ object CanInsert:
       type TypedColumns = C // Tuple of all Columns
     }
 
-    /** Last stage of `CanInsert` generation Here we map members of `A` into
-      * columns of `Table[T]`
+    /** Last stage of `CanInsert` generation Here we map members of `A` into columns of `Table[T]`
       *
       * @warn
-      *   for single-element mapping you should wrap it into `Tuple1.apply` and
-      *   *not* use `x *: EmptyTuple` constructor
+      *   for single-element mapping you should wrap it into `Tuple1.apply` and *not* use `x *:
+      *   EmptyTuple` constructor
       */
     inline transparent def via[I <: NonEmptyTuple](map: S => I)(using
         AllRequired[C, I]
@@ -114,8 +110,7 @@ object CanInsert:
     // `N`'s members are strict subset of `T` *and* covers all non-nullable,
     // non-default members of the table
 
-  /** Summon all instances of `Codec` (via `IsColumn`) into a twiddled tuple
-    * generated from `T`
+  /** Summon all instances of `Codec` (via `IsColumn`) into a twiddled tuple generated from `T`
     */
   inline def getCodec[I <: NonEmptyTuple]: Codec[TwiddleIn[I]] =
     val codec = inline erasedValue[I] match
@@ -136,8 +131,8 @@ object CanInsert:
           a.asInstanceOf[Codec[A]] ~ summonInline[IsColumn[t]].codec
         )
 
-  /** Convert an object of `A` into a twiddle list, described by `C` Where `C`
-    * is a tuple of `TypedColumn.In`, containing functions for destructuring `A`
+  /** Convert an object of `A` into a twiddle list, described by `C` Where `C` is a tuple of
+    * `TypedColumn.In`, containing functions for destructuring `A`
     */
   transparent inline def buildTwiddled[C <: NonEmptyTuple, A](c: C, a: A): Any =
     ${ buildTwiddledImpl[C, A]('c, 'a) }
@@ -174,8 +169,7 @@ object CanInsert:
                   s"Couldn't summon given for `Dissect[${TypeRepr.of[tuple].show}]`"
                 )
 
-  /** `Tuple[1]` is represented as `List(tpe, scala.Tuple$package.EmptyTuple)`,
-    * so we drop tail
+  /** `Tuple[1]` is represented as `List(tpe, scala.Tuple$package.EmptyTuple)`, so we drop tail
     */
   def dropTupleNil(using quotes: Quotes)(
       ins: List[quotes.reflect.TypeRepr]

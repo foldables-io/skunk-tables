@@ -20,9 +20,8 @@ import skunk.{Query => _, *}
 import skunk.data.Completion
 import skunk.implicits.*
 
-/** `Insert` is an `Action` with `INSERT INTO` statement underneath It returns
-  * no values as is (just `Completion`), but can be transformed into a `Query`
-  * if `RETURNING` clause is added
+/** `Insert` is an `Action` with `INSERT INTO` statement underneath It returns no values as is (just
+  * `Completion`), but can be transformed into a `Query` if `RETURNING` clause is added
   */
 sealed trait Insert[F[_], A] extends Action[F, "none", Completion]:
   self =>

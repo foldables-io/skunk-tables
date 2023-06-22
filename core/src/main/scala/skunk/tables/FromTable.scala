@@ -16,23 +16,18 @@
 
 package skunk.tables
 
-import scala.compiletime.{
-  erasedValue,
-  constValue,
-  summonInline,
-  constValueTuple
-}
+import scala.compiletime.{erasedValue, constValue, summonInline, constValueTuple}
 
 import skunk.*
 import skunk.implicits.*
 
 import skunk.tables.internal.{TwiddleTC, Pick}
 
-/** An evidence holding info for selecting a set of columns (or labels - `RL`)
-  * from a table (`C`). Holds type info, decoder and column names.
+/** An evidence holding info for selecting a set of columns (or labels - `RL`) from a table (`C`).
+  * Holds type info, decoder and column names.
   *
-  * It has single instance and gets generated automatically if all labels in
-  * `RL` have a matching counterpart in table columns `C`
+  * It has single instance and gets generated automatically if all labels in `RL` have a matching
+  * counterpart in table columns `C`
   */
 trait FromTable[C <: NonEmptyTuple, RL <: Tuple]:
 
@@ -56,8 +51,7 @@ object FromTable:
       type Columns =
         Pick[C, RL]
 
-      /** A tuple derivated from `Columns` by extracting `A` type from each
-        * `TypedColumn`
+      /** A tuple derivated from `Columns` by extracting `A` type from each `TypedColumn`
         */
       type Out =
         TwiddleTC[Columns]
@@ -68,8 +62,7 @@ object FromTable:
       def decoder =
         getCodec[Columns]
 
-  /** Summon all instances of `Codec` (via `IsColumn`) into a twiddled tuple
-    * generated from `T`
+  /** Summon all instances of `Codec` (via `IsColumn`) into a twiddled tuple generated from `T`
     */
   inline def getCodec[T <: Tuple]: Decoder[TwiddleTC[T]] =
     val codec = inline erasedValue[T] match

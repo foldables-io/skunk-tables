@@ -37,9 +37,7 @@ object Reset:
   def getClean =
     for {
       r <- Reset.build.flatten
-      _ <- Resource.make(Reset.runReset(r) *> Reset.runPrepare(r))(_ =>
-        Reset.runReset(r)
-      )
+      _ <- Resource.make(Reset.runReset(r) *> Reset.runPrepare(r))(_ => Reset.runReset(r))
     } yield r
 
   def runReset(pg: Session[IO]) =
@@ -55,8 +53,7 @@ object Reset:
       .readUtf8Lines(Path(initial))
       .filter(s => !s.startsWith("--"))
       .fold(("", List.empty[String])) {
-        case ((_, sqls), string)
-            if string.startsWith("CREATE") && string.endsWith(";") =>
+        case ((_, sqls), string) if string.startsWith("CREATE") && string.endsWith(";") =>
           ("", dropComment(string) :: sqls)
         case ((acc, sqls), string) if string.startsWith("CREATE") =>
           (acc + "\n" + string, sqls)
