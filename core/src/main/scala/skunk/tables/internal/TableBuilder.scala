@@ -18,14 +18,13 @@ package skunk.tables.internal
 
 import scala.quoted.*
 
-import skunk.tables.{ TypedColumn, Table, ColumnSelect, Dissect }
+import skunk.tables.{TypedColumn, Table, ColumnSelect, Dissect}
 
-/**
-  * A factory, providing set of configuration methods, such as
-  * `withUnique`, `withName` to configure the actual table
+/** A factory, providing set of configuration methods, such as `withUnique`,
+  * `withName` to configure the actual table
   *
-  * The class itself supposed to be internal.
-  * Most members exist only at type-level
+  * The class itself supposed to be internal. Most members exist only at
+  * type-level
   */
 trait TableBuilder[T <: Product]:
   self =>
@@ -35,51 +34,59 @@ trait TableBuilder[T <: Product]:
   /** Union of all column names */
   type ColumnName
   type Columns <: NonEmptyTuple
-  
+
   type Primary <: Tuple
   type Unique <: Tuple
   type Default <: Tuple
   type Nullable <: Tuple
 
-  transparent inline def withName[N <: String & Singleton](label: N): TableBuilder[T] =
+  transparent inline def withName[N <: String & Singleton](
+      label: N
+  ): TableBuilder[T] =
     new TableBuilder[T]:
-      type Name       = N
+      type Name = N
       type ColumnName = self.ColumnName
-      type Columns    = self.Columns
-      type Primary    = self.Primary
-      type Unique     = self.Unique
-      type Default    = self.Default
-      type Nullable   = self.Nullable
+      type Columns = self.Columns
+      type Primary = self.Primary
+      type Unique = self.Unique
+      type Default = self.Default
+      type Nullable = self.Nullable
 
-  transparent inline def withPrimary[Label <: self.ColumnName & Singleton](label: Label): TableBuilder[T] =
+  transparent inline def withPrimary[Label <: self.ColumnName & Singleton](
+      label: Label
+  ): TableBuilder[T] =
     new TableBuilder[T]:
-      type Name       = self.Name
+      type Name = self.Name
       type ColumnName = self.ColumnName
-      type Columns    = self.Columns
-      type Primary    = Label *: self.Primary
-      type Unique     = self.Unique
-      type Default    = self.Default
-      type Nullable   = self.Nullable
+      type Columns = self.Columns
+      type Primary = Label *: self.Primary
+      type Unique = self.Unique
+      type Default = self.Default
+      type Nullable = self.Nullable
 
-  transparent inline def withUnique[Label <: self.ColumnName & Singleton](label: Label): TableBuilder[T] =
+  transparent inline def withUnique[Label <: self.ColumnName & Singleton](
+      label: Label
+  ): TableBuilder[T] =
     new TableBuilder[T]:
-      type Name       = self.Name
+      type Name = self.Name
       type ColumnName = self.ColumnName
-      type Columns    = self.Columns
-      type Primary    = self.Primary
-      type Unique     = Label *: self.Unique
-      type Default    = self.Default
-      type Nullable   = self.Nullable
+      type Columns = self.Columns
+      type Primary = self.Primary
+      type Unique = Label *: self.Unique
+      type Default = self.Default
+      type Nullable = self.Nullable
 
-  transparent inline def withDefault[Label <: self.ColumnName & Singleton](label: Label): TableBuilder[T] =
+  transparent inline def withDefault[Label <: self.ColumnName & Singleton](
+      label: Label
+  ): TableBuilder[T] =
     new TableBuilder[T]:
-      type Name       = self.Name
+      type Name = self.Name
       type ColumnName = self.ColumnName
-      type Columns    = self.Columns
-      type Primary    = self.Primary
-      type Unique     = self.Unique
-      type Default    = Label *: self.Default
-      type Nullable   = self.Nullable
+      type Columns = self.Columns
+      type Primary = self.Primary
+      type Unique = self.Unique
+      type Default = Label *: self.Default
+      type Nullable = self.Nullable
 
 object TableBuilder:
 
@@ -107,19 +114,30 @@ object TableBuilder:
 
         '{ (new TableBuilder[T] {}).asInstanceOf[Init] }
 
-  extension [P <: Product, N, A, U, D, C, O](builder: TableBuilder[P] { type Name = N; type Primary = A; type Unique = U; type Default = D; type Columns = C; type Nullable = O })
+  extension [P <: Product, N, A, U, D, C, O](builder: TableBuilder[P] {
+    type Name = N; type Primary = A; type Unique = U; type Default = D;
+    type Columns = C; type Nullable = O
+  })
     inline transparent def build: Table[P] =
       ${ buildImpl[P, N, A, U, D, C, O] }
 
-  private def buildImpl[P <: Product: Type, N: Type, A: Type, U: Type, D: Type, C: Type, O: Type](using Quotes) =
+  private def buildImpl[
+      P <: Product: Type,
+      N: Type,
+      A: Type,
+      U: Type,
+      D: Type,
+      C: Type,
+      O: Type
+  ](using Quotes) =
     import quotes.reflect.*
 
     val tableName = TypeRepr.of[N] match
       case ConstantType(StringConstant(name)) => name
 
-    val primary  = materializeTuple(TypeRepr.of[A])
-    val unique   = materializeTuple(TypeRepr.of[U])
-    val default  = materializeTuple(TypeRepr.of[D])
+    val primary = materializeTuple(TypeRepr.of[A])
+    val unique = materializeTuple(TypeRepr.of[U])
+    val default = materializeTuple(TypeRepr.of[D])
     val nullable = materializeTuple(TypeRepr.of[O])
 
     val unconstrainedColumns = TypeRepr.of[C]
@@ -141,60 +159,115 @@ object TableBuilder:
     val macroDissect = MacroDissect.build[P]
 
     val dissectS = Dissect.buildImpl[P]
- 
-    
-    (mColumns.asTerm.tpe.asType, namesUnion.asType, mTypedColumns.asTerm.tpe.asType, macroDissect.outType) match
-      case ('[selectType], '[namesUnion], '[typedColumnsType], '[dissectOutType]) =>
+
+    (
+      mColumns.asTerm.tpe.asType,
+      namesUnion.asType,
+      mTypedColumns.asTerm.tpe.asType,
+      macroDissect.outType
+    ) match
+      case (
+            '[selectType],
+            '[namesUnion],
+            '[typedColumnsType],
+            '[dissectOutType]
+          ) =>
         type Final = Table[P] {
           type TypedColumns = typedColumnsType
-          type Select       = selectType
-          type ColumnName   = namesUnion
-          type Columns      = dissectOutType
+          type Select = selectType
+          type ColumnName = namesUnion
+          type Columns = dissectOutType
         }
 
         '{
           (new Table[P] { self =>
-            def typedColumns = ${ mTypedColumns }.asInstanceOf[self.TypedColumns]
-            val select       = ${ mColumns }.asInstanceOf[self.Select]
-            val dissect      = ${dissectS}.asInstanceOf[Dissect.AuxT[P, self.Columns, TwiddleTCN[self.TypedColumns]]]
-            val name         = Table.Name(${ Expr(tableName) })
+            def typedColumns =
+              ${ mTypedColumns }.asInstanceOf[self.TypedColumns]
+            val select = ${ mColumns }.asInstanceOf[self.Select]
+            val dissect = ${ dissectS }
+              .asInstanceOf[Dissect.AuxT[P, self.Columns, TwiddleTCN[
+                self.TypedColumns
+              ]]]
+            val name = Table.Name(${ Expr(tableName) })
           }).asInstanceOf[Final]
         }
 
-  def deconstruct(using quotes: Quotes)(columns: quotes.reflect.TypeRepr): List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)] =
+  def deconstruct(using quotes: Quotes)(
+      columns: quotes.reflect.TypeRepr
+  ): List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)] =
     import quotes.reflect.*
 
     columns match
       case AppliedType(_, typedColumns) =>
         typedColumns.map {
-          case typedColumn @ AppliedType(ref, List(ConstantType(StringConstant(l)), tref, tableName, constraints)) =>
+          case typedColumn @ AppliedType(
+                ref,
+                List(
+                  ConstantType(StringConstant(l)),
+                  tref,
+                  tableName,
+                  constraints
+                )
+              ) =>
             (l, typedColumn, constraints)
-          }
+        }
 
-  def addConstraint(using quotes: Quotes)(constraint: quotes.reflect.TypeRepr, labels: List[String])(columns: quotes.reflect.TypeRepr): quotes.reflect.TypeRepr =
+  def addConstraint(using
+      quotes: Quotes
+  )(constraint: quotes.reflect.TypeRepr, labels: List[String])(
+      columns: quotes.reflect.TypeRepr
+  ): quotes.reflect.TypeRepr =
     import quotes.reflect.*
 
     columns match
       case AppliedType(ref, typedColumns) =>
-        AppliedType(ref, typedColumns.map(addConstraintToColumn(constraint, labels)))
+        AppliedType(
+          ref,
+          typedColumns.map(addConstraintToColumn(constraint, labels))
+        )
 
-  def addConstraintToColumn(using quotes: Quotes)(constraint: quotes.reflect.TypeRepr, labels: List[String])(tpr: quotes.reflect.TypeRepr): quotes.reflect.TypeRepr =
+  def addConstraintToColumn(using
+      quotes: Quotes
+  )(constraint: quotes.reflect.TypeRepr, labels: List[String])(
+      tpr: quotes.reflect.TypeRepr
+  ): quotes.reflect.TypeRepr =
     import quotes.reflect.*
 
     labels.foldLeft(tpr) { (acc, label) =>
       acc match
-        case AppliedType(ref, List(ConstantType(StringConstant(l)), tref, tableName, constraints)) if label == l =>
-          AppliedType(ref, List(ConstantType(StringConstant(l)), tref, tableName, appendTuple(constraints, constraint) ))
+        case AppliedType(
+              ref,
+              List(
+                ConstantType(StringConstant(l)),
+                tref,
+                tableName,
+                constraints
+              )
+            ) if label == l =>
+          AppliedType(
+            ref,
+            List(
+              ConstantType(StringConstant(l)),
+              tref,
+              tableName,
+              appendTuple(constraints, constraint)
+            )
+          )
         case other =>
           other
     }
 
-  def appendTuple(using quotes: Quotes)(tup: quotes.reflect.TypeRepr, toAdd: quotes.reflect.TypeRepr): quotes.reflect.TypeRepr =
+  def appendTuple(using quotes: Quotes)(
+      tup: quotes.reflect.TypeRepr,
+      toAdd: quotes.reflect.TypeRepr
+  ): quotes.reflect.TypeRepr =
     import quotes.reflect.*
 
     tup match
       case TypeRef(TermRef(_, _), "Nothing") =>
-        report.errorAndAbort("Your TypedColumn is missing constraints type parameter")
+        report.errorAndAbort(
+          "Your TypedColumn is missing constraints type parameter"
+        )
       case TypeRef(TermRef(_, _), "EmptyTuple") =>
         val arity = 1
         val tuple = Symbol.requiredClass(s"scala.Tuple${arity}").typeRef
@@ -208,21 +281,25 @@ object TableBuilder:
         val tuple = Symbol.requiredClass(s"scala.Tuple${arity}").typeRef
         AppliedType(tuple, toAdd :: types)
 
-  def materializeTuple(using quotes: Quotes)(repr: quotes.reflect.TypeRepr): List[String] =
+  def materializeTuple(using quotes: Quotes)(
+      repr: quotes.reflect.TypeRepr
+  ): List[String] =
     import quotes.reflect.*
 
-    
     repr match
       case AppliedType(_, ConstantType(StringConstant(c)) :: Nil) =>
         c :: Nil
       case ConstantType(StringConstant(c)) =>
         c :: Nil
-      case AppliedType(_, List(ConstantType(StringConstant(c)), at: AppliedType)) =>
+      case AppliedType(
+            _,
+            List(ConstantType(StringConstant(c)), at: AppliedType)
+          ) =>
         c :: materializeTuple(at)
-      case AppliedType(_ , cts) =>
+      case AppliedType(_, cts) =>
         cts.flatMap(materializeTuple)
       case TermRef(_, _) =>
-        Nil     // EmptyTuple
+        Nil // EmptyTuple
       case TypeRef(_, _) =>
         Nil
 

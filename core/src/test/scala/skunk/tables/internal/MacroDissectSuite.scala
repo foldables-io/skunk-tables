@@ -80,7 +80,6 @@ class MacroDissectSuite extends FunSuite:
     assert(result == Three(1, One(20, "one-1"), Two(3, One(4, "one-2"))))
   }
 
-
   test("Deep Branch and 1-arity constructor from") {
     case class Zero(s: Int)
     case class One(a: Int, b: String, z: Zero)
@@ -91,7 +90,14 @@ class MacroDissectSuite extends FunSuite:
     val input = (1, 20, "one-1", 0, 3, 4, "one-2", 0, 5, "one-3", 0)
     val result = dissect.from(input)
 
-    assert(result == Three(1, One(20, "one-1", Zero(0)), Two(3, One(4, "one-2", Zero(0))), One(5, "one-3", Zero(0))))
+    assert(
+      result == Three(
+        1,
+        One(20, "one-1", Zero(0)),
+        Two(3, One(4, "one-2", Zero(0))),
+        One(5, "one-3", Zero(0))
+      )
+    )
   }
 
   test("Tuple2 to") {
@@ -115,4 +121,3 @@ class MacroDissectSuite extends FunSuite:
 
     assert(result == Tuple1(42))
   }
-

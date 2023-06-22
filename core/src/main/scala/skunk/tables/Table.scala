@@ -25,13 +25,12 @@ import skunk.implicits.*
 
 import skunk.tables.internal.{TableBuilder, TwiddleTCN}
 
-/**
-  * `Table` is the core entity for skunk-tables API.
-  * It links a product type `T` to a Postgres table with specific name and constraints
-  * and provides several utility methods to query that table in a type-safe manner
+/** `Table` is the core entity for skunk-tables API. It links a product type `T`
+  * to a Postgres table with specific name and constraints and provides several
+  * utility methods to query that table in a type-safe manner
   *
-  * Apart from building ready-to-be-executed tables, it also exposes
-  * even lower-level API to e.g. check/get all column names at compile-time
+  * Apart from building ready-to-be-executed tables, it also exposes even
+  * lower-level API to e.g. check/get all column names at compile-time
   */
 trait Table[T <: Product]:
   self =>
@@ -60,7 +59,9 @@ trait Table[T <: Product]:
   given Conversion[List[ColumnName], List[String]] =
     names => names.map(_.asInstanceOf[String])
 
-  /** Skunk twiddler to transform twiddled tuple, received from `select` into concrete `T` */
+  /** Skunk twiddler to transform twiddled tuple, received from `select` into
+    * concrete `T`
+    */
   def dissect: Dissect.AuxT[T, Columns, TwiddleTCN[TypedColumns]]
 
   def count[F[_]]: Query[F, "single", Long] =
@@ -84,7 +85,9 @@ trait Table[T <: Product]:
   def decoder: Decoder[T] =
     Table
       .getCodecs(typedColumns)
-      .imap(twiddled => dissect.untwiddle(twiddled))(columns => dissect.twiddle(columns))
+      .imap(twiddled => dissect.untwiddle(twiddled))(columns =>
+        dissect.twiddle(columns)
+      )
       .imap(columns => dissect.from(columns))(t => dissect.to(t))
 
   /** All column names, in their order */
@@ -112,7 +115,9 @@ trait Table[T <: Product]:
     def columns: Fragment[Void] =
       sql"#${self.getColumnNames.mkString(", ")}"
 
-    /** All comma-separated columns with a prefix (like "p.age, p.name, p.email") */
+    /** All comma-separated columns with a prefix (like "p.age, p.name,
+      * p.email")
+      */
     def columnsOf(prefix: String): Fragment[Void] =
       sql"#${self.getColumnNames.map(n => s"$prefix.$n").mkString(", ")}"
 
@@ -120,11 +125,11 @@ trait Table[T <: Product]:
     def pick(toInclude: ColumnName*): Fragment[Void] =
       sql"#${toInclude.mkString(", ")}"
 
-    /** Pick columns as a comma-separated `Fragment`, except some (type-checked) set */
+    /** Pick columns as a comma-separated `Fragment`, except some (type-checked)
+      * set
+      */
     def except(toExclude: ColumnName*): Fragment[Void] =
       sql"#${getColumnNames.filterNot(name => toExclude.contains(name)).mkString(", ")}"
-
-
 
 object Table:
 
@@ -133,7 +138,6 @@ object Table:
   /** The constructor of `Table` */
   inline transparent def of[T <: Product] =
     ${ TableBuilder.init[T] }
-
 
   opaque type Name = String
 
@@ -144,20 +148,31 @@ object Table:
       def unbox: String = name
       def toFragment: Fragment[Void] = sql"#${unbox}"
 
-
   private def getCodecs[T <: NonEmptyTuple](t: T): Codec[TwiddleTCN[T]] =
     @tailrec
     def go[TT <: Tuple](tt: TT, codecs: Codec[Any]): Codec[Any] =
       tt match
         case EmptyTuple => codecs.asInstanceOf[Codec[Any]]
-        case h *: tail => 
+        case h *: tail =>
           val prod = codecs
-            .product(h.asInstanceOf[TypedColumn[?, ?, ?, ?]].primitive.codec.asInstanceOf[Codec[Any]])
-            .imap[Any *: Any *: EmptyTuple] { case (a, b) => a *: b *: EmptyTuple } { case a *: b *: EmptyTuple => (a, b) }
+            .product(
+              h.asInstanceOf[TypedColumn[?, ?, ?, ?]]
+                .primitive
+                .codec
+                .asInstanceOf[Codec[Any]]
+            )
+            .imap[Any *: Any *: EmptyTuple] { case (a, b) =>
+              a *: b *: EmptyTuple
+            } { case a *: b *: EmptyTuple => (a, b) }
             .asInstanceOf[Codec[Any]]
           go(tail, prod)
 
     t match
       case h *: tail =>
-        go(tail, h.asInstanceOf[TypedColumn[?, ?, ?, ?]].primitive.codec.asInstanceOf[Codec[Any]]).asInstanceOf[Codec[TwiddleTCN[T]]]
-
+        go(
+          tail,
+          h.asInstanceOf[TypedColumn[?, ?, ?, ?]]
+            .primitive
+            .codec
+            .asInstanceOf[Codec[Any]]
+        ).asInstanceOf[Codec[TwiddleTCN[T]]]

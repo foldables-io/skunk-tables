@@ -19,7 +19,7 @@ package skunk.tables
 import java.time.*
 import java.util.UUID
 
-import scala.compiletime.{ summonInline, constValue }
+import scala.compiletime.{summonInline, constValue}
 
 import io.circe.Json
 
@@ -31,8 +31,9 @@ import skunk.Codec
 import skunk.codec.all.*
 import skunk.circe.codec.json.json
 
-
-/** Type class declaring that a type must be represented as a single column in `Table` */
+/** Type class declaring that a type must be represented as a single column in
+  * `Table`
+  */
 trait IsColumn[A]:
   def codec: Codec[A]
 
@@ -44,25 +45,36 @@ object IsColumn:
 
   def apply[A](using ev: IsColumn[A]): IsColumn[A] = ev
 
-  inline given [A: IsColumn]: IsColumn[Option[A]]  = IsColumn(summonInline[IsColumn[A]].codec.opt)
+  inline given [A: IsColumn]: IsColumn[Option[A]] = IsColumn(
+    summonInline[IsColumn[A]].codec.opt
+  )
 
-  inline given [A, B](using inline members: IsColumn[A], inline constraint: Constraint[A, B]): IsColumn[A :| B] =
-    val codec: Codec[A :| B] = members.codec.eimap(a => a.refineEither[B])((s: A :| B) => s.asInstanceOf[A]) 
+  inline given [A, B](using
+      inline members: IsColumn[A],
+      inline constraint: Constraint[A, B]
+  ): IsColumn[A :| B] =
+    val codec: Codec[A :| B] =
+      members.codec.eimap(a => a.refineEither[B])((s: A :| B) =>
+        s.asInstanceOf[A]
+      )
     IsColumn[A :| B](codec)
 
-  inline given [B <: Int](using inline constraint: Constraint[String, MaxLength[B]]): IsColumn[String :| MaxLength[B]] =
-    IsColumn(varchar(constValue[B])).asInstanceOf[IsColumn[String :| MaxLength[B]]]
+  inline given [B <: Int](using
+      inline constraint: Constraint[String, MaxLength[B]]
+  ): IsColumn[String :| MaxLength[B]] =
+    IsColumn(varchar(constValue[B]))
+      .asInstanceOf[IsColumn[String :| MaxLength[B]]]
 
-  inline given IsColumn[String]                    = IsColumn(varchar)
-  inline given IsColumn[Short]                     = IsColumn(int2)
-  inline given IsColumn[Int]                       = IsColumn(int4)
-  inline given IsColumn[Long]                      = IsColumn(int8)
-  inline given IsColumn[Boolean]                   = IsColumn(bool)
-  inline given IsColumn[BigDecimal]                = IsColumn(numeric)
-  inline given IsColumn[LocalDate]                 = IsColumn(date)
-  inline given IsColumn[LocalDateTime]             = IsColumn(timestamp)
-  inline given IsColumn[OffsetDateTime]            = IsColumn(timestamptz)
-  inline given IsColumn[UUID]                      = IsColumn(uuid)
-  inline given IsColumn[Array[Byte]]               = IsColumn(bytea)
+  inline given IsColumn[String] = IsColumn(varchar)
+  inline given IsColumn[Short] = IsColumn(int2)
+  inline given IsColumn[Int] = IsColumn(int4)
+  inline given IsColumn[Long] = IsColumn(int8)
+  inline given IsColumn[Boolean] = IsColumn(bool)
+  inline given IsColumn[BigDecimal] = IsColumn(numeric)
+  inline given IsColumn[LocalDate] = IsColumn(date)
+  inline given IsColumn[LocalDateTime] = IsColumn(timestamp)
+  inline given IsColumn[OffsetDateTime] = IsColumn(timestamptz)
+  inline given IsColumn[UUID] = IsColumn(uuid)
+  inline given IsColumn[Array[Byte]] = IsColumn(bytea)
 
-  inline given IsColumn[Json]                      = IsColumn(json)
+  inline given IsColumn[Json] = IsColumn(json)

@@ -24,8 +24,9 @@ object Constructor:
 
     val (repr, constructor, tpeArgs) =
       tpe match {
-        case AppliedType(repr, reprArguments) => (repr, repr.typeSymbol.primaryConstructor, reprArguments)
-        case notApplied                       => (tpe, tpe.typeSymbol.primaryConstructor, Nil)
+        case AppliedType(repr, reprArguments) =>
+          (repr, repr.typeSymbol.primaryConstructor, reprArguments)
+        case notApplied => (tpe, tpe.typeSymbol.primaryConstructor, Nil)
       }
 
     New(Inferred(repr))

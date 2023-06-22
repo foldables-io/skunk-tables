@@ -23,10 +23,9 @@ import cats.implicits.*
 
 import fs2.Stream
 
-import skunk.{ Query => SkunkQuery, * }
+import skunk.{Query => SkunkQuery, *}
 import skunk.implicits.*
 import skunk.codec.numeric.int8
-
 
 trait Query[F[_], S <: Query.Size, O] extends Action[F, S, O]:
   self =>
@@ -36,15 +35,15 @@ trait Query[F[_], S <: Query.Size, O] extends Action[F, S, O]:
 
   inline def run(session: Session[F])(using Monad[F]): Query.Out[F, S, O] =
     inline erasedValue[S] match
-      case _: "single"   =>
+      case _: "single" =>
         session
           .prepare(fragment.query(decoder))
           .flatMap(prepared => prepared.unique(input))
-      case _: "optional" => 
+      case _: "optional" =>
         session
           .prepare(statement)
           .flatMap(prepared => prepared.option(input))
-      case _: "many"     =>
+      case _: "many" =>
         Stream
           .eval(session.prepare(statement))
           .flatMap(prepared => prepared.stream(input, 4096))
@@ -76,12 +75,12 @@ trait Query[F[_], S <: Query.Size, O] extends Action[F, S, O]:
       def decoder = self.decoder
       def fragment: Fragment[Input] = self.fragment
       override def getOffset: Option[Long] = Some(o)
-    
+
 object Query:
-  /**
-   * Every query is statically known to return exactly-one, at-most-one or zero-or-more elements
-   * `Query.Size` is used to parametrize all `Query` objects
-   */
+  /** Every query is statically known to return exactly-one, at-most-one or
+    * zero-or-more elements `Query.Size` is used to parametrize all `Query`
+    * objects
+    */
   type Size = "single" | "optional" | "many"
 
   type Out[F[_], S <: Size, O] = S match
@@ -89,34 +88,51 @@ object Query:
     case "optional" => F[Option[O]]
     case "many"     => Stream[F, O]
 
-  def count[F[_]](table: Table.Name): Query[F, "single", Long] = 
+  def count[F[_]](table: Table.Name): Query[F, "single", Long] =
     new Query[F, "single", Long]:
       type Input = Void
       val input = Void
       val decoder = int8
-      def fragment: Fragment[Void] = sql"SELECT COUNT(*) FROM ${table.toFragment}"
+      def fragment: Fragment[Void] =
+        sql"SELECT COUNT(*) FROM ${table.toFragment}"
 
-  def select[F[_], A, T](table: Table.Name, names: List[String], ops: TypedColumn.Op[A], aDecoder: Decoder[T]): Query[F, "many", T] = 
+  def select[F[_], A, T](
+      table: Table.Name,
+      names: List[String],
+      ops: TypedColumn.Op[A],
+      aDecoder: Decoder[T]
+  ): Query[F, "many", T] =
     val selectFragment = sql"#${names.mkString(", ")}"
     new Query[F, "many", T]:
       type Input = A
       val input = ops.a
       val decoder = aDecoder
-      def fragment: Fragment[A] = sql"SELECT ${selectFragment} FROM ${table.toFragment} WHERE ${ops.fragment}"
+      def fragment: Fragment[A] =
+        sql"SELECT ${selectFragment} FROM ${table.toFragment} WHERE ${ops.fragment}"
 
-  def get[F[_], A, T](table: Table.Name, names: List[String], ops: TypedColumn.Op[A], aDecoder: Decoder[T]): Query[F, "optional", T] = 
+  def get[F[_], A, T](
+      table: Table.Name,
+      names: List[String],
+      ops: TypedColumn.Op[A],
+      aDecoder: Decoder[T]
+  ): Query[F, "optional", T] =
     val selectFragment = sql"#${names.mkString(", ")}"
     new Query[F, "optional", T]:
       type Input = A
       val input = ops.a
       val decoder = aDecoder
-      def fragment: Fragment[A] = sql"SELECT ${selectFragment} FROM ${table.toFragment} WHERE ${ops.fragment}"
+      def fragment: Fragment[A] =
+        sql"SELECT ${selectFragment} FROM ${table.toFragment} WHERE ${ops.fragment}"
 
-  def all[F[_], A](table: Table.Name, names: List[String], aDecoder: Decoder[A]): Query[F, "many", A] { type Input = Void } =
+  def all[F[_], A](
+      table: Table.Name,
+      names: List[String],
+      aDecoder: Decoder[A]
+  ): Query[F, "many", A] { type Input = Void } =
     val selectFragment = sql"#${names.mkString(", ")}"
     new Query[F, "many", A]:
       type Input = Void
       val input = Void
       val decoder = aDecoder
-      def fragment: Fragment[Void] = sql"SELECT ${selectFragment} FROM ${table.toFragment}"
-
+      def fragment: Fragment[Void] =
+        sql"SELECT ${selectFragment} FROM ${table.toFragment}"

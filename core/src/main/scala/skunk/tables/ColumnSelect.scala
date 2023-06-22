@@ -20,31 +20,27 @@ import scala.quoted.*
 
 import skunk.tables.internal.MacroTable
 
-/**
-  * `Columns` is a "selectable" trait, which means the members of it
-  * are created dynamically at compile-time. Every member maps a member
-  * of case class (`T` param from `Table[T]`) into a Postgres column,
-  * also preservin the type information.
+/** `Columns` is a "selectable" trait, which means the members of it are created
+  * dynamically at compile-time. Every member maps a member of case class (`T`
+  * param from `Table[T]`) into a Postgres column, also preservin the type
+  * information.
   *
-  * It's typically created as part of `Table` and used in its API,
-  * but nothing stops you from accessing typed columns of `table.columns`
-  * directly
+  * It's typically created as part of `Table` and used in its API, but nothing
+  * stops you from accessing typed columns of `table.columns` directly
   */
 trait ColumnSelect extends Selectable:
 
   /** Homongenous tuple of `TypedColumn` */
   type TypedColumns <: NonEmptyTuple
 
-  /**
-   * A tuple of `TypedColumn`. The actual type is inferred dur synthesis
-   * `all` is reserved word in Postgres, so should not cause collisions
-   */
+  /** A tuple of `TypedColumn`. The actual type is inferred dur synthesis `all`
+    * is reserved word in Postgres, so should not cause collisions
+    */
   def all: TypedColumns
 
-  /**
-   * A list of `TypedColumn`. Used as a shortcur only
-   * `get` is reserved word in Postgres, so should not cause collisions
-   */
+  /** A list of `TypedColumn`. Used as a shortcur only `get` is reserved word in
+    * Postgres, so should not cause collisions
+    */
   def get: List[TypedColumn[?, ?, ?, ?]] =
     all.toList.asInstanceOf[List[TypedColumn[?, ?, ?, ?]]]
 
@@ -53,11 +49,12 @@ trait ColumnSelect extends Selectable:
 
   override def toString: String =
     s"ColumnSelect(${get.map(c => s"${c.n}: ${c.primitive.codec.types.mkString(",")}").mkString(", ")})"
-    
 
 object ColumnSelect:
 
-  private[tables] def buildImpl[T: Type](using quotes: Quotes)(macroTable: MacroTable.FinalPhase[quotes.type, T]): Expr[ColumnSelect] =
+  private[tables] def buildImpl[T: Type](using quotes: Quotes)(
+      macroTable: MacroTable.FinalPhase[quotes.type, T]
+  ): Expr[ColumnSelect] =
     import quotes.reflect.*
 
     val nameTypeMap = macroTable.columnMap
@@ -76,7 +73,16 @@ object ColumnSelect:
             Refinement(
               parent = acc,
               name = name,
-              info = TypeRepr.of[TypedColumn].appliedTo(List(Singleton(Expr(name).asTerm).tpe, TypeRepr.of[tpe], tableName, constraint))
+              info = TypeRepr
+                .of[TypedColumn]
+                .appliedTo(
+                  List(
+                    Singleton(Expr(name).asTerm).tpe,
+                    TypeRepr.of[tpe],
+                    tableName,
+                    constraint
+                  )
+                )
             )
       }
 
@@ -85,6 +91,7 @@ object ColumnSelect:
         '{
           (new ColumnSelect { self =>
             val all = ${ typedColumns }.asInstanceOf[self.TypedColumns]
-          }).asInstanceOf[ColumnSelect { type TypedColumns = typedColumns } & refinement ]
+          }).asInstanceOf[
+            ColumnSelect { type TypedColumns = typedColumns } & refinement
+          ]
         }
-
