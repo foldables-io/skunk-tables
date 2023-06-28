@@ -71,14 +71,14 @@ final case class Person(id: Long, firstName: String)
 
 `Table` is the entrypoint. If you want to do anything with Skunk Tables - you need to start with defining your `Table` object for every class you'd like to work with.
 `Table` is a Scala representation of your DB schema and has to match it.
-Above table could be desribed as following:
+Above table could be defined as following:
 
 ```scala
 import cats.effect.{ IO, Resource }
 import skunk.Session
 import skunk.tables.*
 
-val session: Resource[IO, Session[IO]] = ???
+val session: Resource[IO, Session[IO]] = ???  // Will be used later
 
 object Person:
   val table =                   // Bear in mind, you typically don't want to annotate it with `Table[Person]` type as the object has many type memembers which would be erased
@@ -90,17 +90,18 @@ object Person:
       .build                    // Transforming the `TableBuilder` into `Table`
 ```
 
-Now you have the `table` object, which in turn has some self-describing methods, such as `count`, `all`, `insert` etc.
+Now you have the `table` object, which in turn has some useful methods, such as `count`, `all`, `insert` etc.
 These methods represent what we believe are the most common operations one would like to perform over a Postgres table.
 
 ### Query
 
-Most of the methods on `Table` return an object of type `Query[F, S, A]`, the second most common type in `skunk-tables`.
+Most of the methods on `Table` return an object of type `Query[F, S, A]`, which is just a descrption of what should be performend and the second most common type in `skunk-tables`.
 `F` here stands for your effect, typically `IO`, `A` is an unconstrained output type (e.g. `Person` if we querying the items or `Long` if we call `count`) and `S` (size) is one of `"many"`, `"single"` or `"optional"` (yes, they're string literals in the type).
 Both `S` and `A` are dictated by a method being called on a `Table` object.
 If you call `count` - you know you'll get a value, exactly one value and it's going to be `Long`, so you'll get `Query[F, "single", Long]`.
 If you call `get` (get an item by a primary key) - you don't know if the key is present or not in the table, so you're ending up with `Query[F, "optional", A]`.
 And finally if you call `all` - you can have zero or more, potentially even tens or thousands of objects, so it will be `Query[F, "many", A]`.
+
 
 
 ```scala
