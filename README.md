@@ -95,7 +95,13 @@ These methods represent what we believe are the most common operations one would
 
 ### Query
 
-`Query` is another common class.
+Most of the methods on `Table` return an object of type `Query[F, S, A]`, the second most common type in `skunk-tables`.
+`F` here stands for your effect, typically `IO`, `A` is an unconstrained output type (e.g. `Person` if we querying the items or `Long` if we call `count`) and `S` (size) is one of `"many"`, `"single"` or `"optional"` (yes, they're string literals in the type).
+Both `S` and `A` are dictated by a method being called on a `Table` object.
+If you call `count` - you know you'll get a value, exactly one value and it's going to be `Long`, so you'll get `Query[F, "single", Long]`.
+If you call `get` (get an item by a primary key) - you don't know if the key is present or not in the table, so you're ending up with `Query[F, "optional", A]`.
+And finally if you call `all` - you can have zero or more, potentially even tens or thousands of objects, so it will be `Query[F, "many", A]`.
+
 
 ```scala
 val count: Query[IO, "single", Long] = Person.table.count
