@@ -55,14 +55,15 @@ Below sections assume you're working with Postgres table named `persons` and wit
 
 ```sql
 CREATE TABLE persons (
-  first_name        VARCHAR(32)     NOT NULL,
+  id              SERIAL          PRIMARY KEY,
+  first_name      VARCHAR(32)     NOT NULL,
 )
 ```
 
 Wich corresponds to the following case class:
 
 ```scala
-final case class Person(firstName: String)
+final case class Person(id: Long, firstName: String)
 
 ```
 
@@ -84,15 +85,20 @@ object Person:
     Table
       .of[Person]               // We map every field of `Person` class to a Postgres table
       .withName("persons")      // It's better to specify the name manually
-      .withPrimary("person_id") // All string-literals are obviously type-checked. It means you cannot misspell the column name
+      .withPrimary("id")        // All string-literals are obviously type-checked. It means you cannot misspell the column name
+      .withDefault("id")        // `default` means you won't have to provide it when inserting
       .build                    // Transforming the `TableBuilder` into `Table`
 ```
 
 Now you have the `table` object, which in turn has some self-describing methods, such as `count`, `all`, `insert` etc.
 These methods represent what we believe are the most common operations one would like to perform over a Postgres table.
 
+### Query
+
+`Query` is another common class.
+
 ```scala
-val count: Query[IO, "single", Long] = table.count
+val count: Query[IO, "single", Long] = Person.table.count
 session.use(count.run)
 ```
 
