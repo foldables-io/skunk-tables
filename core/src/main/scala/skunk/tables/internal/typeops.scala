@@ -155,8 +155,8 @@ type GetInNames[I <: NonEmptyTuple] <: NonEmptyTuple =
     case TypedColumn.In[IsSingleton[n], ?, ?] *: EmptyTuple => n *: EmptyTuple
     case TypedColumn.In[IsSingleton[n], ?, ?] *: t          => n *: GetInNames[t]
 
-/** Match type to transform `(a, b, c, d)` of `TypedColumn.In` into `(((a, b),
-  * c), d)` (or `a ~ b ~ c ~ d`)
+/** Match type to transform `(a, b, c, d)` of `TypedColumn.In` into `(((a, b), c), d)` (or `a ~ b ~
+  * c ~ d`)
   */
 type TwiddleIn[I <: NonEmptyTuple] =
   I match

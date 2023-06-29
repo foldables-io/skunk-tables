@@ -25,9 +25,8 @@ import quotidian.{MacroMirror, MirrorElem}
 
 import skunk.tables.{IsColumn, TypedColumn}
 
-/** MacroTable is a class containing all information necessary for `Table`
-  * synthezis. It can be of two phases, depending on how much information we
-  * have about type `A`
+/** MacroTable is a class containing all information necessary for `Table` synthezis. It can be of
+  * two phases, depending on how much information we have about type `A`
   */
 sealed trait MacroTable[Q <: Quotes & Singleton, A]:
   val quotes: Q
@@ -62,8 +61,8 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
   def getNamesTuple: Expr[Tuple] =
     Expr.ofTupleFromSeq(getNames.toList.map(name => Expr(name)))
 
-  /** Get ordered tuple of all columns as `TypedColumn` Note: it creates only
-    * values here, types for `Columns` created there within refinement
+  /** Get ordered tuple of all columns as `TypedColumn` Note: it creates only values here, types for
+    * `Columns` created there within refinement
     */
   def getTypedColumns: Expr[Tuple] =
     Expr.ofTupleFromSeq(getTypedColumnsList)
@@ -81,8 +80,7 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
 
 object MacroTable:
 
-  /** Init phase is when `TableBuilder` knows only information derived from `A`
-    * type
+  /** Init phase is when `TableBuilder` knows only information derived from `A` type
     */
   class InitPhase[Q <: Quotes & Singleton, A]
     (val quotes: Q,
@@ -108,8 +106,7 @@ object MacroTable:
             }
       }
 
-  /** Final phase is when `TableBuilder` went through its methods and got more
-    * information from user
+  /** Final phase is when `TableBuilder` went through its methods and got more information from user
     */
   class FinalPhase[Q <: Quotes & Singleton, A]
     (val quotes: Q,

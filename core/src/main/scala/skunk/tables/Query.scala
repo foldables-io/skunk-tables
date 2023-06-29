@@ -80,9 +80,8 @@ trait Query[F[_], S <: Query.Size: ValueOf, O] extends Action[F, S, O]:
     s"Query(${valueOf[S]}, ${self.fragment.sql}, ${self.input})"
 
 object Query:
-  /** Every query is statically known to return exactly-one, at-most-one or
-    * zero-or-more elements `Query.Size` is used to parametrize all `Query`
-    * objects
+  /** Every query is statically known to return exactly-one, at-most-one or zero-or-more elements
+    * `Query.Size` is used to parametrize all `Query` objects
     */
   type Size = "single" | "optional" | "many"
 

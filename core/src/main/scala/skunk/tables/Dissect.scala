@@ -22,12 +22,11 @@ import org.typelevel.twiddles.Iso
 
 import skunk.tables.internal.MacroDissect
 
-/** A type class proving that `T` can be converted into a Tuple of elements,
-  * each of which has `IsColumn[x]` instance
+/** A type class proving that `T` can be converted into a Tuple of elements, each of which has
+  * `IsColumn[x]` instance
   *
   * It's very similar to `Iso`, but unlike `Iso`:
-  *   1. It's recursive, while `Iso` is always single level 2. Respects
-  *      `IsColumn` as a base case
+  *   1. It's recursive, while `Iso` is always single level 2. Respects `IsColumn` as a base case
   */
 trait Dissect[T]:
   self =>

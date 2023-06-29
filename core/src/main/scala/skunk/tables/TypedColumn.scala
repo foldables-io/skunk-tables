@@ -25,12 +25,11 @@ import _root_.io.github.iltotore.iron.IronType
 import skunk.{Fragment, Void, Encoder, ~}
 import skunk.implicits.*
 
-/** TypedColumn contains compile-time information about columns, such as name,
-  * original table, Scala type, associated `IsColumn` type class instance (which
-  * is Posgres type) and set of Postgres constraints
+/** TypedColumn contains compile-time information about columns, such as name, original table, Scala
+  * type, associated `IsColumn` type class instance (which is Posgres type) and set of Postgres
+  * constraints
   *
-  * Both run-time values `name` and `isColumn` can be materialized from type
-  * info
+  * Both run-time values `name` and `isColumn` can be materialized from type info
   */
 final case class TypedColumn[N <: Singleton, A, T, C <: Tuple](name: N, primitive: IsColumn[A]):
 
