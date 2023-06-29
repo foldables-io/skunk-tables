@@ -32,19 +32,14 @@ import skunk.implicits.*
   * Both run-time values `name` and `isColumn` can be materialized from type
   * info
   */
-final case class TypedColumn[N <: Singleton, A, T, C <: Tuple](
-    name: N,
-    primitive: IsColumn[A]
-):
+final case class TypedColumn[N <: Singleton, A, T, C <: Tuple](name: N, primitive: IsColumn[A]):
 
   val n: String = name.toString
 
   infix def ==(c: A): TypedColumn.Op[A] =
     TypedColumn.Op(sql"#$n = ${primitive.codec}", c)
 
-  inline transparent def from[From](
-      get: From => A
-  ): TypedColumn.In[N, From, A] =
+  inline transparent def from[From](get: From => A): TypedColumn.In[N, From, A] =
     TypedColumn.In(get, primitive)
 
   object low:
@@ -93,8 +88,5 @@ object TypedColumn:
     def void: Op[Void] =
       Op(Fragment.empty, Void)
 
-  final case class In[N <: Singleton, A, B](
-      get: A => B,
-      primitive: IsColumn[B]
-  ):
+  final case class In[N <: Singleton, A, B](get: A => B, primitive: IsColumn[B]):
     def use(a: A): B = get(a)

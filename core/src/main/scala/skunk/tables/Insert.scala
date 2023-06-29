@@ -43,9 +43,7 @@ sealed trait Insert[F[_], A] extends Action[F, "none", Completion]:
     * @return
     *   plain `Query` with `single` cardinality
     */
-  transparent inline def returning[RL <: NonEmptyTuple](columns: RL)(using
-      ft: FromTable[Columns, RL]
-  ) =
+  transparent inline def returning[RL <: NonEmptyTuple](columns: RL)(using ft: FromTable[Columns, RL]) =
     new Query[F, "single", ft.Out]:
       type Input = self.Input
       val input   = self.input
@@ -57,11 +55,7 @@ sealed trait Insert[F[_], A] extends Action[F, "none", Completion]:
 
 object Insert:
 
-  def insert[F[_], T, A, C <: NonEmptyTuple](
-      table: Table.Name,
-      a: A,
-      ci: CanInsert[A, T]
-  ) =
+  def insert[F[_], T, A, C <: NonEmptyTuple](table: Table.Name, a: A, ci: CanInsert[A, T]) =
     new Insert[F, A]:
       type Columns = C
       type Input   = ci.Twiddled

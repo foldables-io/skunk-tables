@@ -53,12 +53,7 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
     getNames match
       case NonEmptyList(a, b :: rest) =>
         rest
-          .foldLeft(
-            OrType(
-              ConstantType(StringConstant(a)),
-              ConstantType(StringConstant(b))
-            )
-          )
+          .foldLeft(OrType(ConstantType(StringConstant(a)), ConstantType(StringConstant(b))))
           .apply((orType, name) => OrType(orType, ConstantType(StringConstant(name))))
       case NonEmptyList(a, Nil) =>
         ConstantType(StringConstant(a))
@@ -92,16 +87,12 @@ object MacroTable:
   class InitPhase[Q <: Quotes & Singleton, A](
       val quotes: Q,
       val tpe: Type[A],
-      val columnMap: NonEmptyList[
-        (String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))
-      ]
+      val columnMap: NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))]
   ) extends MacroTable[Q, A]:
     import quotes.reflect.*
 
     def next(
-        constraints: List[
-          (String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)
-        ],
+        constraints: List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)],
         tableName: String
     ): FinalPhase[Q, A] =
       new FinalPhase[Q, A](quotes, tpe, columnMap, constraints, tableName)
@@ -114,10 +105,7 @@ object MacroTable:
           case ('[name], '[tpe]) =>
             val name = nameExpr.asExprOf[name & SSingleton]
             '{
-              new TypedColumn[name & SSingleton, tpe, Nothing, EmptyTuple](
-                ${ name },
-                ${ p.asExprOf[IsColumn[tpe]] }
-              )
+              new TypedColumn[name & SSingleton, tpe, Nothing, EmptyTuple](${ name }, ${ p.asExprOf[IsColumn[tpe]] })
             }
       }
 
@@ -127,12 +115,8 @@ object MacroTable:
   class FinalPhase[Q <: Quotes & Singleton, A](
       val quotes: Q,
       val tpe: Type[A],
-      val columnMap: NonEmptyList[
-        (String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))
-      ],
-      val constraints: List[
-        (String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)
-      ],
+      val columnMap: NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))],
+      val constraints: List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)],
       val tableName: String
   ) extends MacroTable[Q, A]:
     import quotes.reflect.*
@@ -155,54 +139,37 @@ object MacroTable:
 
         val constraint = getConstraint(n)
 
-        (
-          nameExpr.asTerm.tpe.asType,
-          t.asType,
-          tableNameType,
-          constraint.asType
-        ) match
+        (nameExpr.asTerm.tpe.asType, t.asType, tableNameType, constraint.asType) match
           case ('[name], '[tpe], '[tableName], '[constr]) =>
             val name = nameExpr.asExprOf[name & SSingleton]
             '{
-              new TypedColumn[
-                name & SSingleton,
-                tpe,
-                tableName,
-                constr & Tuple
-              ](${ name }, ${ p.asExprOf[IsColumn[tpe]] })
+              new TypedColumn[name & SSingleton, tpe, tableName, constr & Tuple](
+                ${ name },
+                ${ p.asExprOf[IsColumn[tpe]] }
+              )
             }
       }
 
-  def build[T: Type](using
-      quotes: Quotes
-  ): MacroTable.InitPhase[quotes.type, T] =
+  def build[T: Type](using quotes: Quotes): MacroTable.InitPhase[quotes.type, T] =
     import quotes.reflect.*
 
     val mirror = MacroMirror.summonProduct[T]
 
-    val columnMap = NonEmptyList.fromList(
-      flattenProduct[T](Nil)(mirror.elems).map((path, tpe) => snakeCase(path.last) -> tpe)
-    ) match
-      case Some(nel) => nel
-      case None =>
-        report.errorAndAbort(
-          "Could not derive columns. A Columns must contain at least one Column"
-        )
+    val columnMap =
+      NonEmptyList.fromList(flattenProduct[T](Nil)(mirror.elems).map((path, tpe) => snakeCase(path.last) -> tpe)) match
+        case Some(nel) => nel
+        case None =>
+          report.errorAndAbort("Could not derive columns. A Columns must contain at least one Column")
 
     val names = columnMap.map(_._1)
     if names.distinct.length != names.length
-    then
-      report.errorAndAbort(
-        s"Not all column names are unique (${names.toList.mkString(", ")})"
-      )
+    then report.errorAndAbort(s"Not all column names are unique (${names.toList.mkString(", ")})")
 
     new MacroTable.InitPhase(quotes, Type.of[T], columnMap)
 
-  def flattenProduct[T](using
-      quotes: Quotes
-  )(root: List[String])(ls: List[MirrorElem[quotes.type, T, ?]]): List[
-    (NonEmptyList[String], (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))
-  ] =
+  def flattenProduct[T](using quotes: Quotes)(root: List[String])(
+      ls: List[MirrorElem[quotes.type, T, ?]]
+  ): List[(NonEmptyList[String], (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))] =
     import quotes.reflect.*
 
     ls.flatMap { elem =>

@@ -45,21 +45,14 @@ object IsColumn:
 
   def apply[A](using ev: IsColumn[A]): IsColumn[A] = ev
 
-  inline given [A: IsColumn]: IsColumn[Option[A]] = IsColumn(
-    summonInline[IsColumn[A]].codec.opt
-  )
+  inline given [A: IsColumn]: IsColumn[Option[A]] = IsColumn(summonInline[IsColumn[A]].codec.opt)
 
-  inline given [A, B](using
-      inline members: IsColumn[A],
-      inline constraint: Constraint[A, B]
-  ): IsColumn[A :| B] =
+  inline given [A, B](using inline members: IsColumn[A], inline constraint: Constraint[A, B]): IsColumn[A :| B] =
     val codec: Codec[A :| B] =
       members.codec.eimap(a => a.refineEither[B])((s: A :| B) => s.asInstanceOf[A])
     IsColumn[A :| B](codec)
 
-  inline given [B <: Int](using
-      inline constraint: Constraint[String, MaxLength[B]]
-  ): IsColumn[String :| MaxLength[B]] =
+  inline given [B <: Int](using inline constraint: Constraint[String, MaxLength[B]]): IsColumn[String :| MaxLength[B]] =
     IsColumn(varchar(constValue[B]))
       .asInstanceOf[IsColumn[String :| MaxLength[B]]]
 

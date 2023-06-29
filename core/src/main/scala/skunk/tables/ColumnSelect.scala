@@ -75,14 +75,7 @@ object ColumnSelect:
               name = name,
               info = TypeRepr
                 .of[TypedColumn]
-                .appliedTo(
-                  List(
-                    Singleton(Expr(name).asTerm).tpe,
-                    TypeRepr.of[tpe],
-                    tableName,
-                    constraint
-                  )
-                )
+                .appliedTo(List(Singleton(Expr(name).asTerm).tpe, TypeRepr.of[tpe], tableName, constraint))
             )
       }
 
@@ -92,7 +85,5 @@ object ColumnSelect:
           (new ColumnSelect:
             self =>
             val all = ${ typedColumns }.asInstanceOf[self.TypedColumns]
-          ).asInstanceOf[
-            ColumnSelect { type TypedColumns = typedColumns } & refinement
-          ]
+          ).asInstanceOf[ColumnSelect { type TypedColumns = typedColumns } & refinement]
         }

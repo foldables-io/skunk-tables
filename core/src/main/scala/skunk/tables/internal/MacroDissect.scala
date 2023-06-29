@@ -80,10 +80,7 @@ object MacroDissect:
     override def toString: String =
       s"Branch(${in.show}, (${out.map(_.show).mkString(", ")}), $nested)"
 
-  private final case class Accumulator(
-      position: Int,
-      transforms: List[Expr[Tuple => Tuple]]
-  ):
+  private final case class Accumulator(position: Int, transforms: List[Expr[Tuple => Tuple]]):
     def next(t: Expr[Tuple => Tuple]): Accumulator =
       Accumulator(position + 1, t :: transforms)
     def next(ts: List[Expr[Tuple => Tuple]]): Accumulator =
@@ -101,9 +98,7 @@ object MacroDissect:
         }
 
         if nested.exists(_.isDefined) then
-          buildBranch[T](pm)(
-            nested.asInstanceOf[List[Option[MacroDissect[quotes.type]]]]
-          )
+          buildBranch[T](pm)(nested.asInstanceOf[List[Option[MacroDissect[quotes.type]]]])
         else buildLeaf[T](pm)
 
       case _ =>
@@ -133,9 +128,7 @@ object MacroDissect:
       def twiddled =
         out match
           case Nil =>
-            report.errorAndAbort(
-              "Invalid state. Dissected type cannot be empty Product"
-            )
+            report.errorAndAbort("Invalid state. Dissected type cannot be empty Product")
           case a :: Nil =>
             TypeRepr.of[Tuple1].appliedTo(a)
           case a :: b :: Nil =>
@@ -157,9 +150,7 @@ object MacroDissect:
               val init = (a, b)
               tail.foldLeft(init)((acc, tpe) => (acc, tpe))
             case Nil =>
-              throw new IllegalStateException(
-                "Dissected product cannot be empty"
-              )
+              throw new IllegalStateException("Dissected product cannot be empty")
         }
 
         f.asTerm
@@ -176,9 +167,7 @@ object MacroDissect:
               case Nil =>
                 Nil
               case _ =>
-                throw new IllegalStateException(
-                  "Twiddled list is a nested pair of pairs"
-                )
+                throw new IllegalStateException("Twiddled list is a nested pair of pairs")
 
           Tuple.fromArray(go(input.toList.asInstanceOf[List[Object]]).toArray)
         }
@@ -187,9 +176,9 @@ object MacroDissect:
 
   /** Every branch has only one level of nested dissects
     */
-  def buildBranch[T: Type](using quote: Quotes)(
-      pm: MacroMirror[quotes.type, T]
-  )(nestedDissects: List[Option[MacroDissect[quotes.type]]]) =
+  def buildBranch[T: Type](using quote: Quotes)(pm: MacroMirror[quotes.type, T])(
+      nestedDissects: List[Option[MacroDissect[quotes.type]]]
+  ) =
     import quotes.reflect.*
 
     new MacroDissect.Branch[quotes.type](quote):
@@ -245,9 +234,7 @@ object MacroDissect:
       def twiddled =
         out match
           case Nil =>
-            report.errorAndAbort(
-              "Invalid state. Dissected type cannot be empty Product"
-            )
+            report.errorAndAbort("Invalid state. Dissected type cannot be empty Product")
           case a :: Nil =>
             TypeRepr.of[Tuple1].appliedTo(a)
           case a :: b :: Nil =>
@@ -269,9 +256,7 @@ object MacroDissect:
               val init = (a, b)
               tail.foldLeft(init)((acc, tpe) => (acc, tpe))
             case Nil =>
-              throw new IllegalStateException(
-                "Dissected product cannot be empty"
-              )
+              throw new IllegalStateException("Dissected product cannot be empty")
         }
 
         f.asTerm
@@ -288,9 +273,7 @@ object MacroDissect:
               case Nil =>
                 Nil
               case _ =>
-                throw new IllegalStateException(
-                  "Twiddled list is a nested pair of pairs"
-                )
+                throw new IllegalStateException("Twiddled list is a nested pair of pairs")
 
           Tuple.fromArray(go(input.toList.asInstanceOf[List[Object]]).toArray)
         }
@@ -312,9 +295,7 @@ object MacroDissect:
     *     recurse into its `nested` structure and flatten everything there, then
     *     once it's ready - apply `Branch`'s constructor
     */
-  private def flatten(using
-      quote: Quotes
-  )(drop: Int, nested: List[Option[MacroDissect[?]]]): Accumulator =
+  private def flatten(using quote: Quotes)(drop: Int, nested: List[Option[MacroDissect[?]]]): Accumulator =
     nested.foldLeft(Accumulator(drop, Nil)) {
       case (accumulator, None) =>
         val step = '{ (input: Tuple) => input }
@@ -329,18 +310,12 @@ object MacroDissect:
 
       case (accumulator, Some(branch: MacroDissect.Branch[?])) =>
         val inner = flatten(accumulator.position, branch.nested)
-        val step = mkStep(
-          accumulator.position,
-          branch.arity,
-          branch.constructTupled.asExpr
-        )
+        val step  = mkStep(accumulator.position, branch.arity, branch.constructTupled.asExpr)
 
         accumulator.next(step :: inner.transforms)
     }
 
-  def mkStep(using
-      quote: Quotes
-  )(position: Int, arity: Int, constructor: Expr[Any]): Expr[Tuple => Tuple] =
+  def mkStep(using quote: Quotes)(position: Int, arity: Int, constructor: Expr[Any]): Expr[Tuple => Tuple] =
     val arityExpr    = Expr(arity)
     val positionExpr = Expr(position)
 

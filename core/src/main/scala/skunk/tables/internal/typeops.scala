@@ -37,15 +37,9 @@ type TwiddleTC[C <: Tuple] =
 type TwiddleTCGo[C <: NonEmptyTuple, A <: Tuple] =
   (C, A) match
     case (TypedColumn[?, b, ?, ?] *: EmptyTuple, EmptyTuple) => b
-    case (
-            TypedColumn[?, b1, ?, ?] *: TypedColumn[?, b2, ?, ?] *: EmptyTuple,
-            EmptyTuple
-        ) =>
+    case (TypedColumn[?, b1, ?, ?] *: TypedColumn[?, b2, ?, ?] *: EmptyTuple, EmptyTuple) =>
       b1 ~ b2
-    case (
-            TypedColumn[?, b1, ?, ?] *: TypedColumn[?, b2, ?, ?] *: tail,
-            EmptyTuple
-        ) =>
+    case (TypedColumn[?, b1, ?, ?] *: TypedColumn[?, b2, ?, ?] *: tail, EmptyTuple) =>
       TwiddleTCGo[tail, b1 ~ b2]
     case (TypedColumn[?, b, ?, ?] *: tail, acc) => TwiddleTCGo[tail, acc ~ b]
 
@@ -79,10 +73,7 @@ type NonRequiredConstraints =
 type Required[C <: NonEmptyTuple] <: Tuple =
   C match
     case TypedColumn[n, ?, ?, c] *: t =>
-      RequiredGo[
-        t,
-        IfInM[c, NonRequiredConstraints, EmptyTuple, n *: EmptyTuple]
-      ]
+      RequiredGo[t, IfInM[c, NonRequiredConstraints, EmptyTuple, n *: EmptyTuple]]
 type RequiredGo[C <: Tuple, A <: Tuple] <: Tuple =
   C match
     case EmptyTuple => A
@@ -128,10 +119,7 @@ inline def reifyT[C <: Tuple]: Reify[C] =
     case _: EmptyTuple =>
       EmptyTuple
     case _: (TypedColumn[IsSingleton[n], a, t, c] *: tail) =>
-      TypedColumn[n, a, t, c](
-        constValue[n],
-        summonInline[IsColumn[a]]
-      ) *: reifyT[tail]
+      TypedColumn[n, a, t, c](constValue[n], summonInline[IsColumn[a]]) *: reifyT[tail]
 
 type ReifyN[C <: NonEmptyTuple] <: NonEmptyTuple =
   C match
@@ -144,15 +132,9 @@ type ReifyN[C <: NonEmptyTuple] <: NonEmptyTuple =
 inline def reifyNT[C <: NonEmptyTuple]: ReifyN[C] =
   inline erasedValue[C] match
     case _: (TypedColumn[IsSingleton[n], a, t, c] *: EmptyTuple) =>
-      TypedColumn[n, a, t, c](
-        constValue[n],
-        summonInline[IsColumn[a]]
-      ) *: EmptyTuple
+      TypedColumn[n, a, t, c](constValue[n], summonInline[IsColumn[a]]) *: EmptyTuple
     case _: (TypedColumn[IsSingleton[n], a, t, c] *: h2 *: tail) =>
-      TypedColumn[n, a, t, c](
-        constValue[n],
-        summonInline[IsColumn[a]]
-      ) *: reifyNT[h2 *: tail]
+      TypedColumn[n, a, t, c](constValue[n], summonInline[IsColumn[a]]) *: reifyNT[h2 *: tail]
 
 type GetNames[C <: Tuple] <: Tuple =
   C match

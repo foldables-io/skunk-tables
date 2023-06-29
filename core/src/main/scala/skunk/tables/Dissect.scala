@@ -88,7 +88,5 @@ object Dissect:
               ${ twiddleTo }.asInstanceOf[self.Out => self.Twiddled].apply(t)
             def untwiddle(t: self.Twiddled): self.Out =
               ${ twiddleFrom }.asInstanceOf[self.Twiddled => self.Out].apply(t)
-          ).asInstanceOf[Dissect[
-            T
-          ] { type Out = outType; type Twiddled = twiddledType }]
+          ).asInstanceOf[Dissect[T] { type Out = outType; type Twiddled = twiddledType }]
         }

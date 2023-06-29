@@ -34,28 +34,17 @@ class AllRequiredSuite extends FunSuite:
           "id",
           Int,
           "tasks_items",
-          (
-              TypedColumn.Constraint.Default.type,
-              TypedColumn.Constraint.Primary.type
-          )
+          (TypedColumn.Constraint.Default.type, TypedColumn.Constraint.Primary.type)
         ],
-        TypedColumn["created_at", Int, "tasks_items", Tuple1[
-          TypedColumn.Constraint.Default.type
-        ]],
+        TypedColumn["created_at", Int, "tasks_items", Tuple1[TypedColumn.Constraint.Default.type]],
         TypedColumn["created_by", Int, "tasks_items", EmptyTuple.type],
-        TypedColumn["row_version", Int, "tasks_items", Tuple1[
-          TypedColumn.Constraint.Default.type
-        ]],
-        TypedColumn["row_status", Option[
-          Foo.Foo
-        ], "tasks_items", EmptyTuple.type],
+        TypedColumn["row_version", Int, "tasks_items", Tuple1[TypedColumn.Constraint.Default.type]],
+        TypedColumn["row_status", Option[Foo.Foo], "tasks_items", EmptyTuple.type],
         TypedColumn["updated_at", Option[Int], "tasks_items", EmptyTuple.type],
         TypedColumn["updated_by", Option[Int], "tasks_items", EmptyTuple.type],
         TypedColumn["title", String, "tasks_items", EmptyTuple.type],
         TypedColumn["assignee_id", Option[Int], "tasks_items", EmptyTuple.type],
-        TypedColumn["status", Int, "tasks_items", Tuple1[
-          TypedColumn.Constraint.Default.type
-        ]],
+        TypedColumn["status", Int, "tasks_items", Tuple1[TypedColumn.Constraint.Default.type]],
         TypedColumn["due", Option[String], "tasks_items", EmptyTuple.type],
         TypedColumn["repeating", Option[Int], "tasks_items", EmptyTuple.type]
     )
@@ -114,9 +103,7 @@ class AllRequiredSuite extends FunSuite:
     type Columns = (
         TypedColumn["one", Option[Boolean], "foo", EmptyTuple],
         TypedColumn["two", Int, "foo", EmptyTuple],
-        TypedColumn["three", Option[
-          String
-        ], "foo", TypedColumn.Constraint.Nullable.type *: EmptyTuple],
+        TypedColumn["three", Option[String], "foo", TypedColumn.Constraint.Nullable.type *: EmptyTuple],
     )
 
     assert(constValueTuple[Required[Columns]] == "one" *: "two" *: EmptyTuple)
@@ -125,12 +112,7 @@ class AllRequiredSuite extends FunSuite:
   test("Required drops fields with Default Constraint") {
     type Columns = (
         TypedColumn["one", Boolean, "foo", EmptyTuple],
-        TypedColumn[
-          "two",
-          Int,
-          "foo",
-          TypedColumn.Constraint.Default.type *: EmptyTuple
-        ],
+        TypedColumn["two", Int, "foo", TypedColumn.Constraint.Default.type *: EmptyTuple],
         TypedColumn["three", String, "foo", EmptyTuple],
     )
 
@@ -139,21 +121,9 @@ class AllRequiredSuite extends FunSuite:
 
   test("Required can return EmptyTuple") {
     type Columns = (
-        TypedColumn["one", Option[
-          Boolean
-        ], "foo", TypedColumn.Constraint.Nullable.type *: EmptyTuple],
-        TypedColumn["two", Option[
-          Int
-        ], "foo", TypedColumn.Constraint.Default.type *: EmptyTuple],
-        TypedColumn[
-          "three",
-          String,
-          "foo",
-          (
-              TypedColumn.Constraint.Unique.type,
-              TypedColumn.Constraint.Default.type
-          )
-        ],
+        TypedColumn["one", Option[Boolean], "foo", TypedColumn.Constraint.Nullable.type *: EmptyTuple],
+        TypedColumn["two", Option[Int], "foo", TypedColumn.Constraint.Default.type *: EmptyTuple],
+        TypedColumn["three", String, "foo", (TypedColumn.Constraint.Unique.type, TypedColumn.Constraint.Default.type)],
     )
 
     assert(constValueTuple[Required[Columns]] == EmptyTuple)
@@ -163,21 +133,10 @@ class AllRequiredSuite extends FunSuite:
     type Columns = (
         TypedColumn["one", Boolean, "foo", EmptyTuple],
         TypedColumn["two", Int, "foo", EmptyTuple],
-        TypedColumn[
-          "three",
-          String,
-          "foo",
-          (
-              TypedColumn.Constraint.Unique.type,
-              TypedColumn.Constraint.Default.type
-          )
-        ],
+        TypedColumn["three", String, "foo", (TypedColumn.Constraint.Unique.type, TypedColumn.Constraint.Default.type)],
     )
 
-    type Ins = (
-        TypedColumn.In["one", Int, Boolean],
-        TypedColumn.In["two", Int, Int],
-    )
+    type Ins = (TypedColumn.In["one", Int, Boolean], TypedColumn.In["two", Int, Int], )
 
     assert(constValue[AllRequired.AllMapped[Columns, Ins]])
   }
@@ -186,15 +145,7 @@ class AllRequiredSuite extends FunSuite:
     type Columns = (
         TypedColumn["one", Boolean, "foo", EmptyTuple],
         TypedColumn["two", Int, "foo", EmptyTuple],
-        TypedColumn[
-          "three",
-          String,
-          "foo",
-          (
-              TypedColumn.Constraint.Unique.type,
-              TypedColumn.Constraint.Default.type
-          )
-        ],
+        TypedColumn["three", String, "foo", (TypedColumn.Constraint.Unique.type, TypedColumn.Constraint.Default.type)],
     )
 
     type Ins = (
@@ -212,21 +163,10 @@ class AllRequiredSuite extends FunSuite:
     type Columns = (
         TypedColumn["one", Boolean, "foo", EmptyTuple],
         TypedColumn["two", Int, "foo", EmptyTuple],
-        TypedColumn[
-          "three",
-          String,
-          "foo",
-          (
-              TypedColumn.Constraint.Unique.type,
-              TypedColumn.Constraint.Default.type
-          )
-        ],
+        TypedColumn["three", String, "foo", (TypedColumn.Constraint.Unique.type, TypedColumn.Constraint.Default.type)],
     )
 
-    type Ins = (
-        TypedColumn.In["one", Int, Boolean],
-        TypedColumn.In["two", Int, Int],
-    )
+    type Ins = (TypedColumn.In["one", Int, Boolean], TypedColumn.In["two", Int, Int], )
 
     summon[AllRequired[Columns, Ins]]
   }

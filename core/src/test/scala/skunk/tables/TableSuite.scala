@@ -87,9 +87,7 @@ class TableSuite extends CatsEffectSuite:
 
     val result: IO[List[TableSuite.PersonWithMeta]] = Reset.getClean.use { session =>
       TableSuite.tableWithMeta
-        .insert[IO, TableSuite.PersonNew](
-          TableSuite.PersonNew(1, "Anton", 35)
-        )
+        .insert[IO, TableSuite.PersonNew](TableSuite.PersonNew(1, "Anton", 35))
         .run(session) *>
         TableSuite.tableWithMeta.all
           .run(session)
@@ -132,9 +130,4 @@ object TableSuite:
   given CanInsert[PersonNew, PersonWithMeta] =
     CanInsert[PersonNew]
       .into(tableWithMeta)
-      .via(columns =>
-        (
-          columns.first_name.from[PersonNew](_.firstName),
-          columns.age.from[PersonNew](_.age),
-        )
-      )
+      .via(columns => (columns.first_name.from[PersonNew](_.firstName), columns.age.from[PersonNew](_.age), ))

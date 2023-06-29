@@ -67,9 +67,9 @@ object CanInsert:
     new CanInsertPartialInit[A] {}
 
   trait CanInsertPartialInit[A]:
-    inline transparent def into[T <: Product, S, C <: NonEmptyTuple](
-        table: Table[T] { type Select = S; type TypedColumns = C }
-    ): CanInsertPartialFinal[A, T, S, C] =
+    inline transparent def into[T <: Product, S, C <: NonEmptyTuple](table: Table[T] {
+      type Select = S; type TypedColumns = C
+    }): CanInsertPartialFinal[A, T, S, C] =
       new CanInsertPartialFinal[A, T, S, C]:
         val tableOfT = table
 
@@ -90,9 +90,7 @@ object CanInsert:
       *   for single-element mapping you should wrap it into `Tuple1.apply` and
       *   *not* use `x *: EmptyTuple` constructor
       */
-    inline transparent def via[I <: NonEmptyTuple](map: S => I)(using
-        AllRequired[C, I]
-    ): CanInsert[A, T] =
+    inline transparent def via[I <: NonEmptyTuple](map: S => I)(using AllRequired[C, I]): CanInsert[A, T] =
       new CanInsert[A, T]:
         type Twiddled =
           TwiddleIn[I]
@@ -122,9 +120,7 @@ object CanInsert:
       case _: (TypedColumn.In[?, ?, h1] *: EmptyTuple) =>
         summonInline[IsColumn[h1]].codec.imap(h1 => Tuple(h1))(_.head)
       case _: (TypedColumn.In[?, ?, h1] *: TypedColumn.In[?, ?, h2] *: t) =>
-        getCodecGo[t, Codec[h1 ~ h2]](
-          summonInline[IsColumn[h1]].codec ~ summonInline[IsColumn[h2]].codec
-        )
+        getCodecGo[t, Codec[h1 ~ h2]](summonInline[IsColumn[h1]].codec ~ summonInline[IsColumn[h2]].codec)
 
     codec.asInstanceOf[Codec[TwiddleIn[I]]]
 
@@ -132,9 +128,7 @@ object CanInsert:
     inline erasedValue[T] match
       case _: EmptyTuple => a
       case _: (TypedColumn.In[?, ?, t] *: ts) =>
-        getCodecGo[ts, Codec[A ~ t]](
-          a.asInstanceOf[Codec[A]] ~ summonInline[IsColumn[t]].codec
-        )
+        getCodecGo[ts, Codec[A ~ t]](a.asInstanceOf[Codec[A]] ~ summonInline[IsColumn[t]].codec)
 
   /** Convert an object of `A` into a twiddle list, described by `C` Where `C`
     * is a tuple of `TypedColumn.In`, containing functions for destructuring `A`
@@ -170,16 +164,12 @@ object CanInsert:
                       .to(${ tuple.asExprOf[tuple] }))
                 }
               case None =>
-                report.errorAndAbort(
-                  s"Couldn't summon given for `Dissect[${TypeRepr.of[tuple].show}]`"
-                )
+                report.errorAndAbort(s"Couldn't summon given for `Dissect[${TypeRepr.of[tuple].show}]`")
 
   /** `Tuple[1]` is represented as `List(tpe, scala.Tuple$package.EmptyTuple)`,
     * so we drop tail
     */
-  def dropTupleNil(using quotes: Quotes)(
-      ins: List[quotes.reflect.TypeRepr]
-  ): List[quotes.reflect.TypeRepr] =
+  def dropTupleNil(using quotes: Quotes)(ins: List[quotes.reflect.TypeRepr]): List[quotes.reflect.TypeRepr] =
     ins match
       case List(h, t) if t.show.endsWith("EmptyTuple") => List(h)
       case _                                           => ins
@@ -191,9 +181,7 @@ object CanInsert:
         TypedColumn.In[N, A, B](getter, primitive)
 
     object MappedColumn:
-      def apply[A, N <: Singleton, B, T, C <: Tuple](
-          column: TypedColumn[N, B, T, C]
-      ): MappedColumn[N, A, B] =
+      def apply[A, N <: Singleton, B, T, C <: Tuple](column: TypedColumn[N, B, T, C]): MappedColumn[N, A, B] =
         MappedColumn[N, A, B](column.primitive)
 
       type Build[A, TC <: TypedColumn[?, ?, ?, ?]] =
