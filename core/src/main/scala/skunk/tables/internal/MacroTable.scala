@@ -91,9 +91,8 @@ object MacroTable:
   ) extends MacroTable[Q, A]:
     import quotes.reflect.*
 
-    def next(
-        constraints: List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)],
-        tableName: String
+    def next(constraints: List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)],
+             tableName: String
     ): FinalPhase[Q, A] =
       new FinalPhase[Q, A](quotes, tpe, columnMap, constraints, tableName)
 
@@ -143,9 +142,8 @@ object MacroTable:
           case ('[name], '[tpe], '[tableName], '[constr]) =>
             val name = nameExpr.asExprOf[name & SSingleton]
             '{
-              new TypedColumn[name & SSingleton, tpe, tableName, constr & Tuple](
-                ${ name },
-                ${ p.asExprOf[IsColumn[tpe]] }
+              new TypedColumn[name & SSingleton, tpe, tableName, constr & Tuple](${ name },
+                                                                                 ${ p.asExprOf[IsColumn[tpe]] }
               )
             }
       }

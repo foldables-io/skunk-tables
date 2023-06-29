@@ -70,12 +70,11 @@ object ColumnSelect:
         val constraint = macroTable.getConstraint(name)
         (tpr.asType, Singleton(Expr(name).asTerm).tpe.asType) match
           case ('[tpe], '[name]) =>
-            Refinement(
-              parent = acc,
-              name = name,
-              info = TypeRepr
-                .of[TypedColumn]
-                .appliedTo(List(Singleton(Expr(name).asTerm).tpe, TypeRepr.of[tpe], tableName, constraint))
+            Refinement(parent = acc,
+                       name = name,
+                       info = TypeRepr
+                         .of[TypedColumn]
+                         .appliedTo(List(Singleton(Expr(name).asTerm).tpe, TypeRepr.of[tpe], tableName, constraint))
             )
       }
 

@@ -99,11 +99,10 @@ object Query:
       def fragment: Fragment[Void] =
         sql"SELECT COUNT(*) FROM ${table.toFragment}"
 
-  def select[F[_], A, T](
-      table: Table.Name,
-      names: List[String],
-      ops: TypedColumn.Op[A],
-      aDecoder: Decoder[T]
+  def select[F[_], A, T](table: Table.Name,
+                         names: List[String],
+                         ops: TypedColumn.Op[A],
+                         aDecoder: Decoder[T]
   ): Query[F, "many", T] =
     val selectFragment = sql"#${names.mkString(", ")}"
     new Query[F, "many", T]:
@@ -113,11 +112,10 @@ object Query:
       def fragment: Fragment[A] =
         sql"SELECT ${selectFragment} FROM ${table.toFragment} WHERE ${ops.fragment}"
 
-  def get[F[_], A, T](
-      table: Table.Name,
-      names: List[String],
-      ops: TypedColumn.Op[A],
-      aDecoder: Decoder[T]
+  def get[F[_], A, T](table: Table.Name,
+                      names: List[String],
+                      ops: TypedColumn.Op[A],
+                      aDecoder: Decoder[T]
   ): Query[F, "optional", T] =
     val selectFragment = sql"#${names.mkString(", ")}"
     new Query[F, "optional", T]:
@@ -127,10 +125,9 @@ object Query:
       def fragment: Fragment[A] =
         sql"SELECT ${selectFragment} FROM ${table.toFragment} WHERE ${ops.fragment}"
 
-  def all[F[_], A](
-      table: Table.Name,
-      names: List[String],
-      aDecoder: Decoder[A]
+  def all[F[_], A](table: Table.Name,
+                   names: List[String],
+                   aDecoder: Decoder[A]
   ): Query[F, "many", A] { type Input = Void } =
     val selectFragment = sql"#${names.mkString(", ")}"
     new Query[F, "many", A]:

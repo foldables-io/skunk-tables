@@ -73,12 +73,11 @@ object Reset:
     else s.take(idx)
 
   def build =
-    Session.pooled[IO](
-      host = "localhost",
-      port = 5432,
-      user = "postgres",
-      database = "skunk",
-      password = Some("Supersecret1"),
-      strategy = Typer.Strategy.SearchPath,
-      max = 2
+    Session.pooled[IO](host = "localhost",
+                       port = 5432,
+                       user = "postgres",
+                       database = "skunk",
+                       password = Some("Supersecret1"),
+                       strategy = Typer.Strategy.SearchPath,
+                       max = 2
     )

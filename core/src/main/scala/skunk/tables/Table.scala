@@ -167,10 +167,9 @@ object Table:
 
     t match
       case h *: tail =>
-        go(
-          tail,
-          h.asInstanceOf[TypedColumn[?, ?, ?, ?]]
-            .primitive
-            .codec
-            .asInstanceOf[Codec[Any]]
+        go(tail,
+           h.asInstanceOf[TypedColumn[?, ?, ?, ?]]
+             .primitive
+             .codec
+             .asInstanceOf[Codec[Any]]
         ).asInstanceOf[Codec[TwiddleTCN[T]]]
