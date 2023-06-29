@@ -136,7 +136,7 @@ It might look like not a big win at saving keystrokes, but there are few things 
 - In future we should be able to combine `Fragment`s coming from different sources:
 
 ```scala
-Person.table.count.fragment ~ sql" WHERE ${table.select.age.low.eql}"
+Person.table.count.fragment ~ sql" WHERE ${age.eql}"
 ```
 
 
@@ -152,3 +152,18 @@ Next steps:
 * Better complie-time error messages (God bless you if you make a typo on 1+ `Table` now)
 * Make `Query` monadic
 
+## Copyright and license
+
+The Skunk Tables is copyright 2023 Foldables Ltd.
+
+Licensed under the **[Apache License, Version 2.0][license]** (the "License");
+you may not use this software except in compliance with the License.
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+[license-image]: http://img.shields.io/badge/license-Apache--2-blue.svg?style=flat
+[license]: http://www.apache.org/licenses/LICENSE-2.0
