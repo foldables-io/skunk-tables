@@ -31,7 +31,8 @@ import skunk.Codec
 import skunk.codec.all.*
 import skunk.circe.codec.json.json
 
-/** Type class declaring that a type must be represented as a single column in `Table`
+/** Type class declaring that a type must be represented as a single column in
+  * `Table`
   */
 trait IsColumn[A]:
   def codec: Codec[A]
@@ -62,16 +63,16 @@ object IsColumn:
     IsColumn(varchar(constValue[B]))
       .asInstanceOf[IsColumn[String :| MaxLength[B]]]
 
-  inline given IsColumn[String] = IsColumn(varchar)
-  inline given IsColumn[Short] = IsColumn(int2)
-  inline given IsColumn[Int] = IsColumn(int4)
-  inline given IsColumn[Long] = IsColumn(int8)
-  inline given IsColumn[Boolean] = IsColumn(bool)
-  inline given IsColumn[BigDecimal] = IsColumn(numeric)
-  inline given IsColumn[LocalDate] = IsColumn(date)
-  inline given IsColumn[LocalDateTime] = IsColumn(timestamp)
+  inline given IsColumn[String]         = IsColumn(varchar)
+  inline given IsColumn[Short]          = IsColumn(int2)
+  inline given IsColumn[Int]            = IsColumn(int4)
+  inline given IsColumn[Long]           = IsColumn(int8)
+  inline given IsColumn[Boolean]        = IsColumn(bool)
+  inline given IsColumn[BigDecimal]     = IsColumn(numeric)
+  inline given IsColumn[LocalDate]      = IsColumn(date)
+  inline given IsColumn[LocalDateTime]  = IsColumn(timestamp)
   inline given IsColumn[OffsetDateTime] = IsColumn(timestamptz)
-  inline given IsColumn[UUID] = IsColumn(uuid)
-  inline given IsColumn[Array[Byte]] = IsColumn(bytea)
+  inline given IsColumn[UUID]           = IsColumn(uuid)
+  inline given IsColumn[Array[Byte]]    = IsColumn(bytea)
 
   inline given IsColumn[Json] = IsColumn(json)

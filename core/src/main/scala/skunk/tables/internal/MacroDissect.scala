@@ -39,7 +39,8 @@ abstract sealed class MacroDissect[Q <: Quotes & Singleton](val quotes: Q):
   /** A function that can transform `out` to `in` */
   def construct: quotes.reflect.Term
 
-  /** A "twiddled" version of `out`, where items grouped in paris, e.g. (((1,2),3),4)
+  /** A "twiddled" version of `out`, where items grouped in paris, e.g.
+    * (((1,2),3),4)
     */
   def twiddled: quotes.reflect.TypeRepr
 
@@ -62,17 +63,15 @@ abstract sealed class MacroDissect[Q <: Quotes & Singleton](val quotes: Q):
 object MacroDissect:
 
   /** A `Product` type that only has primtivie types in it, i.e. no nesting */
-  abstract class Leaf[Q <: Quotes & Singleton](override val quotes: Q)
-      extends MacroDissect[Q](quotes):
+  abstract class Leaf[Q <: Quotes & Singleton](override val quotes: Q) extends MacroDissect[Q](quotes):
     def outTupled: List[quotes.reflect.TypeRepr] = out
     override def toString: String =
       s"Leaf(${in.show}, (${out.map(_.show).mkString(", ")}))"
 
   /** A `Product` type that contains primtive types, leafs and other branches */
-  abstract class Branch[Q <: Quotes & Singleton](override val quotes: Q)
-      extends MacroDissect[Q](quotes):
-    /** Unlike `construct` this `Term` represents real constructor, not destructured, i.e.
-      * transforms `outTupled` to `in`
+  abstract class Branch[Q <: Quotes & Singleton](override val quotes: Q) extends MacroDissect[Q](quotes):
+    /** Unlike `construct` this `Term` represents real constructor, not
+      * destructured, i.e. transforms `outTupled` to `in`
       */
     def constructTupled: quotes.reflect.Term
 
@@ -101,12 +100,11 @@ object MacroDissect:
             case None    => Some(build[tpe])
         }
 
-        if (nested.exists(_.isDefined))
+        if nested.exists(_.isDefined) then
           buildBranch[T](pm)(
             nested.asInstanceOf[List[Option[MacroDissect[quotes.type]]]]
           )
-        else
-          buildLeaf[T](pm)
+        else buildLeaf[T](pm)
 
       case _ =>
         report.errorAndAbort(
@@ -117,20 +115,20 @@ object MacroDissect:
     import quotes.reflect.*
 
     new MacroDissect.Leaf[quotes.type](quotes):
-      val in = pm.monoType
+      val in  = pm.monoType
       val out = pm.elemTypeReprs
       val destruct =
         '{ (t: T) => fromProduct(t.asInstanceOf[Product]) }.asTerm
       val construct =
         // This is a hacky way to say that `Tuple1[A]` constructor is not `A => Tuple[A]`, but `identity`
         // because we always work with tuples
-        if (in.typeSymbol == Symbol.classSymbol("scala.Tuple1"))
+        if in.typeSymbol == Symbol.classSymbol("scala.Tuple1") then
           Ref(Symbol.requiredMethod("scala.Predef.identity"))
             .appliedToType(TypeRepr.of[Tuple1].appliedTo(out.head))
             .etaExpand(Symbol.spliceOwner)
         else
           val ctor = Constructor.apply(in).etaExpand(Symbol.spliceOwner)
-          if (out.length > 1) Select.unique(ctor, "tupled") else ctor
+          if out.length > 1 then Select.unique(ctor, "tupled") else ctor
 
       def twiddled =
         out match
@@ -157,7 +155,7 @@ object MacroDissect:
               (a, b)
             case a :: b :: tail =>
               val init = (a, b)
-              tail.foldLeft(init) { (acc, tpe) => (acc, tpe) }
+              tail.foldLeft(init)((acc, tpe) => (acc, tpe))
             case Nil =>
               throw new IllegalStateException(
                 "Dissected product cannot be empty"
@@ -171,8 +169,7 @@ object MacroDissect:
           def go(i: List[Object]): List[Any] =
             i match
               case List(a, c) =>
-                (if a.isInstanceOf[Tuple] then
-                   go(a.asInstanceOf[Tuple].toList.asInstanceOf[List[Object]])
+                (if a.isInstanceOf[Tuple] then go(a.asInstanceOf[Tuple].toList.asInstanceOf[List[Object]])
                  else List(a)) ++ List(c)
               case a :: Nil =>
                 List(a)
@@ -230,7 +227,7 @@ object MacroDissect:
 
       val constructTupled =
         val ctor = Constructor.apply(in).etaExpand(Symbol.spliceOwner)
-        if (out.length > 1) Select.unique(ctor, "tupled") else ctor
+        if out.length > 1 then Select.unique(ctor, "tupled") else ctor
 
       def construct: quotes.reflect.Term =
         val functionsExpr = Expr.ofList(flatten(0, nested).transforms.reverse)
@@ -270,7 +267,7 @@ object MacroDissect:
               (a, b)
             case a :: b :: tail =>
               val init = (a, b)
-              tail.foldLeft(init) { (acc, tpe) => (acc, tpe) }
+              tail.foldLeft(init)((acc, tpe) => (acc, tpe))
             case Nil =>
               throw new IllegalStateException(
                 "Dissected product cannot be empty"
@@ -284,8 +281,7 @@ object MacroDissect:
           def go(i: List[Object]): List[Any] =
             i match
               case List(a, c) =>
-                (if a.isInstanceOf[Tuple] then
-                   go(a.asInstanceOf[Tuple].toList.asInstanceOf[List[Object]])
+                (if a.isInstanceOf[Tuple] then go(a.asInstanceOf[Tuple].toList.asInstanceOf[List[Object]])
                  else List(a)) ++ List(c)
               case a :: Nil =>
                 List(a)
@@ -301,20 +297,20 @@ object MacroDissect:
 
         f.asTerm
 
-  /** A function producing a list of functions that if applied sequentially, can transform a flat
-    * tuple of `(1,2,3,4,5,6)` into a nested/tree structure of original hierarchy, `A(1, B(2,3),
-    * C(4, D(5,6)))`.
+  /** A function producing a list of functions that if applied sequentially, can
+    * transform a flat tuple of `(1,2,3,4,5,6)` into a nested/tree structure of
+    * original hierarchy, `A(1, B(2,3), C(4, D(5,6)))`.
     *
-    * Its flow depends on [[nested]] to decide what transformation to apply to every element. It has
-    * three cases:
-    *   - If element is primtive (no `Dissect`) - apply no transformation, so `(1,2,3)` remains
-    *     `(1,2,3)`
-    *   - If element is a `Leaf` (a `Product` that itself contains only primitives) - apply a
-    *     constructor to `n` element (`n` = arity) and drop `n` elements, so `(1,2,3)` turns into
-    *     `(1,A(2,3))`
-    *   - If element if a `Branch` (a `Product` with `Leaf`s/primtives) - first recurse into its
-    *     `nested` structure and flatten everything there, then once it's ready - apply `Branch`'s
-    *     constructor
+    * Its flow depends on [[nested]] to decide what transformation to apply to
+    * every element. It has three cases:
+    *   - If element is primtive (no `Dissect`) - apply no transformation, so
+    *     `(1,2,3)` remains `(1,2,3)`
+    *   - If element is a `Leaf` (a `Product` that itself contains only
+    *     primitives) - apply a constructor to `n` element (`n` = arity) and
+    *     drop `n` elements, so `(1,2,3)` turns into `(1,A(2,3))`
+    *   - If element if a `Branch` (a `Product` with `Leaf`s/primtives) - first
+    *     recurse into its `nested` structure and flatten everything there, then
+    *     once it's ready - apply `Branch`'s constructor
     */
   private def flatten(using
       quote: Quotes
@@ -345,7 +341,7 @@ object MacroDissect:
   def mkStep(using
       quote: Quotes
   )(position: Int, arity: Int, constructor: Expr[Any]): Expr[Tuple => Tuple] =
-    val arityExpr = Expr(arity)
+    val arityExpr    = Expr(arity)
     val positionExpr = Expr(position)
 
     '{ (input: Tuple) =>

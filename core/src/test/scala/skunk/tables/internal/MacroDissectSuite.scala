@@ -27,7 +27,7 @@ class MacroDissectSuite extends FunSuite:
 
     val dissect = Dissect.build[One]
 
-    val input = One(42, "one")
+    val input  = One(42, "one")
     val result = dissect.to(input)
 
     assert(result == (42, "one"))
@@ -39,7 +39,7 @@ class MacroDissectSuite extends FunSuite:
 
     val dissect = Dissect.build[Two]
 
-    val input = Two(42L, One(142, "one"))
+    val input  = Two(42L, One(142, "one"))
     val result = dissect.to(input)
     assert(result == (42L, 142, "one"))
   }
@@ -50,7 +50,7 @@ class MacroDissectSuite extends FunSuite:
 
     val dissect = Dissect.build[Two]
 
-    val input = (42L, 142, "one")
+    val input  = (42L, 142, "one")
     val result = dissect.from(input)
 
     assert(result == Two(42L, One(142, "one")))
@@ -62,7 +62,7 @@ class MacroDissectSuite extends FunSuite:
 
     val dissect = Dissect.build[Two]
 
-    val input = (42L, 141, "one", 142, "two")
+    val input  = (42L, 141, "one", 142, "two")
     val result = dissect.from(input)
 
     assert(result == Two(42L, One(141, "one"), One(142, "two")))
@@ -74,8 +74,8 @@ class MacroDissectSuite extends FunSuite:
     case class Three(a: Int, one: One, two: Two)
 
     val dissect = Dissect.build[Three]
-    val input = (1, 20, "one-1", 3, 4, "one-2")
-    val result = dissect.from(input)
+    val input   = (1, 20, "one-1", 3, 4, "one-2")
+    val result  = dissect.from(input)
 
     assert(result == Three(1, One(20, "one-1"), Two(3, One(4, "one-2"))))
   }
@@ -87,8 +87,8 @@ class MacroDissectSuite extends FunSuite:
     case class Three(a: Int, one: One, two: Two, o1: One)
 
     val dissect = Dissect.build[Three]
-    val input = (1, 20, "one-1", 0, 3, 4, "one-2", 0, 5, "one-3", 0)
-    val result = dissect.from(input)
+    val input   = (1, 20, "one-1", 0, 3, 4, "one-2", 0, 5, "one-3", 0)
+    val result  = dissect.from(input)
 
     assert(
       result == Three(
@@ -105,7 +105,7 @@ class MacroDissectSuite extends FunSuite:
 
     val dissect = Dissect.build[One]
 
-    val input = (42, "one")
+    val input  = (42, "one")
     val result = dissect.to(input)
 
     assert(result == (42, "one"))
@@ -116,7 +116,7 @@ class MacroDissectSuite extends FunSuite:
 
     val dissect = Dissect.build[One]
 
-    val input = Tuple1(42)
+    val input  = Tuple1(42)
     val result = dissect.to(input)
 
     assert(result == Tuple1(42))

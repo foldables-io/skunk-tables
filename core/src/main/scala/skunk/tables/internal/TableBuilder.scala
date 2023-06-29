@@ -20,10 +20,11 @@ import scala.quoted.*
 
 import skunk.tables.{TypedColumn, Table, ColumnSelect, Dissect}
 
-/** A factory, providing set of configuration methods, such as `withUnique`, `withName` to configure
-  * the actual table
+/** A factory, providing set of configuration methods, such as `withUnique`,
+  * `withName` to configure the actual table
   *
-  * The class itself supposed to be internal. Most members exist only at type-level
+  * The class itself supposed to be internal. Most members exist only at
+  * type-level
   */
 trait TableBuilder[T <: Product]:
   self =>
@@ -43,49 +44,49 @@ trait TableBuilder[T <: Product]:
       label: N
   ): TableBuilder[T] =
     new TableBuilder[T]:
-      type Name = N
+      type Name       = N
       type ColumnName = self.ColumnName
-      type Columns = self.Columns
-      type Primary = self.Primary
-      type Unique = self.Unique
-      type Default = self.Default
-      type Nullable = self.Nullable
+      type Columns    = self.Columns
+      type Primary    = self.Primary
+      type Unique     = self.Unique
+      type Default    = self.Default
+      type Nullable   = self.Nullable
 
   transparent inline def withPrimary[Label <: self.ColumnName & Singleton](
       label: Label
   ): TableBuilder[T] =
     new TableBuilder[T]:
-      type Name = self.Name
+      type Name       = self.Name
       type ColumnName = self.ColumnName
-      type Columns = self.Columns
-      type Primary = Label *: self.Primary
-      type Unique = self.Unique
-      type Default = self.Default
-      type Nullable = self.Nullable
+      type Columns    = self.Columns
+      type Primary    = Label *: self.Primary
+      type Unique     = self.Unique
+      type Default    = self.Default
+      type Nullable   = self.Nullable
 
   transparent inline def withUnique[Label <: self.ColumnName & Singleton](
       label: Label
   ): TableBuilder[T] =
     new TableBuilder[T]:
-      type Name = self.Name
+      type Name       = self.Name
       type ColumnName = self.ColumnName
-      type Columns = self.Columns
-      type Primary = self.Primary
-      type Unique = Label *: self.Unique
-      type Default = self.Default
-      type Nullable = self.Nullable
+      type Columns    = self.Columns
+      type Primary    = self.Primary
+      type Unique     = Label *: self.Unique
+      type Default    = self.Default
+      type Nullable   = self.Nullable
 
   transparent inline def withDefault[Label <: self.ColumnName & Singleton](
       label: Label
   ): TableBuilder[T] =
     new TableBuilder[T]:
-      type Name = self.Name
+      type Name       = self.Name
       type ColumnName = self.ColumnName
-      type Columns = self.Columns
-      type Primary = self.Primary
-      type Unique = self.Unique
-      type Default = Label *: self.Default
-      type Nullable = self.Nullable
+      type Columns    = self.Columns
+      type Primary    = self.Primary
+      type Unique     = self.Unique
+      type Default    = Label *: self.Default
+      type Nullable   = self.Nullable
 
 object TableBuilder:
 
@@ -95,7 +96,7 @@ object TableBuilder:
 
     val macroTable = MacroTable.build[T]
 
-    val namesUnion = macroTable.getNamesUnion.asType
+    val namesUnion   = macroTable.getNamesUnion.asType
     val typedColumns = macroTable.getTypedColumns.asTerm.tpe.asType
 
     val nullableColumns = macroTable.getNullableColumns.asTerm.tpe
@@ -104,17 +105,17 @@ object TableBuilder:
       case ('[namesUnion], '[typedColumns], '[nullableColumns]) =>
         type Init = TableBuilder[T] {
           type ColumnName = namesUnion
-          type Columns = typedColumns
-          type Primary = EmptyTuple
-          type Unique = EmptyTuple
-          type Default = EmptyTuple
-          type Nullable = nullableColumns
+          type Columns    = typedColumns
+          type Primary    = EmptyTuple
+          type Unique     = EmptyTuple
+          type Default    = EmptyTuple
+          type Nullable   = nullableColumns
         }
 
         '{ (new TableBuilder[T] {}).asInstanceOf[Init] }
 
   extension [P <: Product, N, A, U, D, C, O](builder: TableBuilder[P] {
-    type Name = N; type Primary = A; type Unique = U; type Default = D;
+    type Name    = N; type Primary  = A; type Unique = U; type Default = D;
     type Columns = C; type Nullable = O
   })
     inline transparent def build: Table[P] =
@@ -134,9 +135,9 @@ object TableBuilder:
     val tableName = TypeRepr.of[N] match
       case ConstantType(StringConstant(name)) => name
 
-    val primary = materializeTuple(TypeRepr.of[A])
-    val unique = materializeTuple(TypeRepr.of[U])
-    val default = materializeTuple(TypeRepr.of[D])
+    val primary  = materializeTuple(TypeRepr.of[A])
+    val unique   = materializeTuple(TypeRepr.of[U])
+    val default  = materializeTuple(TypeRepr.of[D])
     val nullable = materializeTuple(TypeRepr.of[O])
 
     val unconstrainedColumns = TypeRepr.of[C]
@@ -173,13 +174,14 @@ object TableBuilder:
           ) =>
         type Final = Table[P] {
           type TypedColumns = typedColumnsType
-          type Select = selectType
-          type ColumnName = namesUnion
-          type Columns = dissectOutType
+          type Select       = selectType
+          type ColumnName   = namesUnion
+          type Columns      = dissectOutType
         }
 
         '{
-          (new Table[P] { self =>
+          (new Table[P]:
+            self =>
             def typedColumns =
               ${ mTypedColumns }.asInstanceOf[self.TypedColumns]
             val select = ${ mColumns }.asInstanceOf[self.Select]
@@ -188,7 +190,7 @@ object TableBuilder:
                 self.TypedColumns
               ]]]
             val name = Table.Name(${ Expr(tableName) })
-          }).asInstanceOf[Final]
+          ).asInstanceOf[Final]
         }
 
   def deconstruct(using quotes: Quotes)(

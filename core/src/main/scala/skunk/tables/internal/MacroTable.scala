@@ -16,7 +16,7 @@
 
 package skunk.tables.internal
 
-import scala.{Singleton => SSingleton}
+import scala.Singleton as SSingleton
 import scala.quoted.*
 
 import cats.data.NonEmptyList
@@ -25,8 +25,9 @@ import quotidian.{MacroMirror, MirrorElem}
 
 import skunk.tables.{IsColumn, TypedColumn}
 
-/** MacroTable is a class containing all information necessary for `Table` synthezis. It can be of
-  * two phases, depending on how much information we have about type `A`
+/** MacroTable is a class containing all information necessary for `Table`
+  * synthezis. It can be of two phases, depending on how much information we
+  * have about type `A`
   */
 sealed trait MacroTable[Q <: Quotes & Singleton, A]:
   val quotes: Q
@@ -66,8 +67,8 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
   def getNamesTuple: Expr[Tuple] =
     Expr.ofTupleFromSeq(getNames.toList.map(name => Expr(name)))
 
-  /** Get ordered tuple of all columns as `TypedColumn` Note: it creates only values here, types for
-    * `Columns` created there within refinement
+  /** Get ordered tuple of all columns as `TypedColumn` Note: it creates only
+    * values here, types for `Columns` created there within refinement
     */
   def getTypedColumns: Expr[Tuple] =
     Expr.ofTupleFromSeq(getTypedColumnsList)
@@ -85,7 +86,8 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
 
 object MacroTable:
 
-  /** Init phase is when `TableBuilder` knows only information derived from `A` type
+  /** Init phase is when `TableBuilder` knows only information derived from `A`
+    * type
     */
   class InitPhase[Q <: Quotes & Singleton, A](
       val quotes: Q,
@@ -119,7 +121,8 @@ object MacroTable:
             }
       }
 
-  /** Final phase is when `TableBuilder` went through its methods and got more information from user
+  /** Final phase is when `TableBuilder` went through its methods and got more
+    * information from user
     */
   class FinalPhase[Q <: Quotes & Singleton, A](
       val quotes: Q,
@@ -147,7 +150,7 @@ object MacroTable:
 
     def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]] =
       columnMap.toList.map { case (n, (t, p)) =>
-        val nameExpr = Expr(n)
+        val nameExpr      = Expr(n)
         val tableNameType = Singleton(Expr(tableName).asTerm).tpe.asType
 
         val constraint = getConstraint(n)
@@ -187,7 +190,7 @@ object MacroTable:
         )
 
     val names = columnMap.map(_._1)
-    if (names.distinct.length != names.length)
+    if names.distinct.length != names.length
     then
       report.errorAndAbort(
         s"Not all column names are unique (${names.toList.mkString(", ")})"

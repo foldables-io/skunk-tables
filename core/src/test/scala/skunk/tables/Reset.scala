@@ -30,21 +30,21 @@ import skunk.util.Typer
 
 object Reset:
   val resetFile = getClass.getResource("/reset.sql").getFile
-  val initial = getClass.getResource("/prepare.sql").getFile
+  val initial   = getClass.getResource("/prepare.sql").getFile
 
   /** Prepare a database in one session, then create another for query execution
     */
   def getClean =
-    for {
+    for
       r <- Reset.build.flatten
       _ <- Resource.make(Reset.runReset(r) *> Reset.runPrepare(r))(_ => Reset.runReset(r))
-    } yield r
+    yield r
 
   def runReset(pg: Session[IO]) =
     Files[IO]
       .readUtf8Lines(Path(resetFile))
       .filter(s => !s.isBlank)
-      .evalTap { line => pg.execute(sql"""#$line""".command) }
+      .evalTap(line => pg.execute(sql"""#$line""".command))
       .compile
       .drain
 
@@ -62,14 +62,14 @@ object Reset:
         case ((acc, sqls), string) =>
           (acc + "\n" + string, sqls)
       }
-      .flatMap { (_, sqls) => Stream.emits(sqls.reverse) }
-      .evalTap { sql => pg.execute(sql"""#$sql""".command) }
+      .flatMap((_, sqls) => Stream.emits(sqls.reverse))
+      .evalTap(sql => pg.execute(sql"""#$sql""".command))
       .compile
       .drain
 
   def dropComment(s: String): String =
     val idx = s.indexOfSlice("-- ")
-    if (idx == -1) s
+    if idx == -1 then s
     else s.take(idx)
 
   def build =

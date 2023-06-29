@@ -23,11 +23,11 @@ import cats.implicits.*
 
 import fs2.Stream
 
-import skunk.{Query => SkunkQuery, *}
+import skunk.{Query as SkunkQuery, *}
 import skunk.implicits.*
 import skunk.codec.numeric.int8
 
-trait Query[F[_], S <: Query.Size, O] extends Action[F, S, O]:
+trait Query[F[_], S <: Query.Size: ValueOf, O] extends Action[F, S, O]:
   self =>
 
   /** Decoder for the output */
@@ -61,9 +61,9 @@ trait Query[F[_], S <: Query.Size, O] extends Action[F, S, O]:
   def limit(using S =:= "many")(l: Long): Query[F, "many", O] =
     new Query[F, "many", O]:
       type Input = self.Input
-      def input = self.input
-      def decoder = self.decoder
-      def fragment: Fragment[Input] = self.fragment
+      def input                           = self.input
+      def decoder                         = self.decoder
+      def fragment: Fragment[Input]       = self.fragment
       override def getLimit: Option[Long] = Some(l)
 
   def getOffset: Option[Long] = None
@@ -71,14 +71,18 @@ trait Query[F[_], S <: Query.Size, O] extends Action[F, S, O]:
   def offset(using S =:= "many")(o: Long): Query[F, "many", O] =
     new Query[F, "many", O]:
       type Input = self.Input
-      def input = self.input
-      def decoder = self.decoder
-      def fragment: Fragment[Input] = self.fragment
+      def input                            = self.input
+      def decoder                          = self.decoder
+      def fragment: Fragment[Input]        = self.fragment
       override def getOffset: Option[Long] = Some(o)
 
+  override def toString: String =
+    s"Query(${valueOf[S]}, ${self.fragment.sql}, ${self.input})"
+
 object Query:
-  /** Every query is statically known to return exactly-one, at-most-one or zero-or-more elements
-    * `Query.Size` is used to parametrize all `Query` objects
+  /** Every query is statically known to return exactly-one, at-most-one or
+    * zero-or-more elements `Query.Size` is used to parametrize all `Query`
+    * objects
     */
   type Size = "single" | "optional" | "many"
 
@@ -90,7 +94,7 @@ object Query:
   def count[F[_]](table: Table.Name): Query[F, "single", Long] =
     new Query[F, "single", Long]:
       type Input = Void
-      val input = Void
+      val input   = Void
       val decoder = int8
       def fragment: Fragment[Void] =
         sql"SELECT COUNT(*) FROM ${table.toFragment}"
@@ -104,7 +108,7 @@ object Query:
     val selectFragment = sql"#${names.mkString(", ")}"
     new Query[F, "many", T]:
       type Input = A
-      val input = ops.a
+      val input   = ops.a
       val decoder = aDecoder
       def fragment: Fragment[A] =
         sql"SELECT ${selectFragment} FROM ${table.toFragment} WHERE ${ops.fragment}"
@@ -118,7 +122,7 @@ object Query:
     val selectFragment = sql"#${names.mkString(", ")}"
     new Query[F, "optional", T]:
       type Input = A
-      val input = ops.a
+      val input   = ops.a
       val decoder = aDecoder
       def fragment: Fragment[A] =
         sql"SELECT ${selectFragment} FROM ${table.toFragment} WHERE ${ops.fragment}"
@@ -131,7 +135,7 @@ object Query:
     val selectFragment = sql"#${names.mkString(", ")}"
     new Query[F, "many", A]:
       type Input = Void
-      val input = Void
+      val input   = Void
       val decoder = aDecoder
       def fragment: Fragment[Void] =
         sql"SELECT ${selectFragment} FROM ${table.toFragment}"

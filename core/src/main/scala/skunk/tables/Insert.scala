@@ -16,12 +16,13 @@
 
 package skunk.tables
 
-import skunk.{Query => _, *}
+import skunk.{Query as _, *}
 import skunk.data.Completion
 import skunk.implicits.*
 
-/** `Insert` is an `Action` with `INSERT INTO` statement underneath It returns no values as is (just
-  * `Completion`), but can be transformed into a `Query` if `RETURNING` clause is added
+/** `Insert` is an `Action` with `INSERT INTO` statement underneath It returns
+  * no values as is (just `Completion`), but can be transformed into a `Query`
+  * if `RETURNING` clause is added
   */
 sealed trait Insert[F[_], A] extends Action[F, "none", Completion]:
   self =>
@@ -47,7 +48,7 @@ sealed trait Insert[F[_], A] extends Action[F, "none", Completion]:
   ) =
     new Query[F, "single", ft.Out]:
       type Input = self.Input
-      val input = self.input
+      val input   = self.input
       val decoder = ft.decoder
       // I don't know why `Fragment` interpolation needs casting when the method is transparent
       val fragment: Fragment[Input] =
@@ -63,11 +64,10 @@ object Insert:
   ) =
     new Insert[F, A]:
       type Columns = C
-      type Input = ci.Twiddled
+      type Input   = ci.Twiddled
 
       def input: Input =
-        if (table.toString == "inventory_lists")
-          println(s"Transforming ${ci} with $a")
+        if table.toString == "inventory_lists" then println(s"Transforming ${ci} with $a")
         ci.transform(a)
       def fragment: Fragment[Input] =
         sql"INSERT INTO ${table.toFragment} (${ci.columnsFragment}) VALUES (${ci.encoder})"
