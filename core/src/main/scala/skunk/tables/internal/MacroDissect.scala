@@ -39,8 +39,7 @@ abstract sealed class MacroDissect[Q <: Quotes & Singleton](val quotes: Q):
   /** A function that can transform `out` to `in` */
   def construct: quotes.reflect.Term
 
-  /** A "twiddled" version of `out`, where items grouped in paris, e.g. (((1,2),3),4)
-    */
+  /** A "twiddled" version of `out`, where items grouped in paris, e.g. (((1,2),3),4) */
   def twiddled: quotes.reflect.TypeRepr
 
   /** A function to transform `out` into `twiddled` */
@@ -173,8 +172,7 @@ object MacroDissect:
 
         f.asTerm
 
-  /** Every branch has only one level of nested dissects
-    */
+  /** Every branch has only one level of nested dissects */
   def buildBranch[T: Type]
     (using quote: Quotes)
     (pm: MacroMirror[quotes.type, T])

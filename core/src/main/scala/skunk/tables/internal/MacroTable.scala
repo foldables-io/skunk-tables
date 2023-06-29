@@ -42,8 +42,7 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
 
   def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]]
 
-  /** List of normalized column names, guaranteed to be distinct and non-empty
-    */
+  /** List of normalized column names, guaranteed to be distinct and non-empty */
   def getNames: NonEmptyList[String] =
     columnMap.map(_._1)
 
@@ -80,8 +79,7 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
 
 object MacroTable:
 
-  /** Init phase is when `TableBuilder` knows only information derived from `A` type
-    */
+  /** Init phase is when `TableBuilder` knows only information derived from `A` type */
   class InitPhase[Q <: Quotes & Singleton, A]
     (val quotes: Q,
      val tpe: Type[A],
@@ -145,6 +143,9 @@ object MacroTable:
             }
       }
 
+  /** Build an init phase of `MacroTable`. At this point there's no info about table (name or
+    * constraints). Use `.next` to get to the final phase
+    */
   def build[T: Type](using quotes: Quotes): MacroTable.InitPhase[quotes.type, T] =
     import quotes.reflect.*
 

@@ -31,8 +31,7 @@ import skunk.Codec
 import skunk.codec.all.*
 import skunk.circe.codec.json.json
 
-/** Type class declaring that a type must be represented as a single column in `Table`
-  */
+/** Type class declaring that a type must be represented as a single column in `Table` */
 trait IsColumn[A]:
   def codec: Codec[A]
 

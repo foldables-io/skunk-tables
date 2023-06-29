@@ -51,8 +51,7 @@ object FromTable:
       type Columns =
         Pick[C, RL]
 
-      /** A tuple derivated from `Columns` by extracting `A` type from each `TypedColumn`
-        */
+      /** A tuple derivated from `Columns` by extracting `A` type from each `TypedColumn` */
       type Out =
         TwiddleTC[Columns]
 
@@ -62,8 +61,7 @@ object FromTable:
       def decoder =
         getCodec[Columns]
 
-  /** Summon all instances of `Codec` (via `IsColumn`) into a twiddled tuple generated from `T`
-    */
+  /** Summon all instances of `Codec` (via `IsColumn`) into a twiddled tuple generated from `T` */
   inline def getCodec[T <: Tuple]: Decoder[TwiddleTC[T]] =
     val codec = inline erasedValue[T] match
       case EmptyTuple =>

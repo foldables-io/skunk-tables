@@ -112,8 +112,7 @@ object TableSuite:
       .via(columns =>
         (columns.id.from[PersonNew](_.id),
          columns.first_name.from[PersonNew](_.firstName),
-         columns.age.from[PersonNew](_.age)
-        )
+         columns.age.from[PersonNew](_.age))
       )
 
   case class Meta(id: Int, createdAt: LocalDateTime)

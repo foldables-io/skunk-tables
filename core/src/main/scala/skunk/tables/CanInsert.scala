@@ -110,8 +110,7 @@ object CanInsert:
     // `N`'s members are strict subset of `T` *and* covers all non-nullable,
     // non-default members of the table
 
-  /** Summon all instances of `Codec` (via `IsColumn`) into a twiddled tuple generated from `T`
-    */
+  /** Summon all instances of `Codec` (via `IsColumn`) into a twiddled tuple generated from `T` */
   inline def getCodec[I <: NonEmptyTuple]: Codec[TwiddleIn[I]] =
     val codec = inline erasedValue[I] match
       case _: (TypedColumn.In[?, ?, h1] *: EmptyTuple) =>
@@ -164,8 +163,7 @@ object CanInsert:
               case None =>
                 report.errorAndAbort(s"Couldn't summon given for `Dissect[${TypeRepr.of[tuple].show}]`")
 
-  /** `Tuple[1]` is represented as `List(tpe, scala.Tuple$package.EmptyTuple)`, so we drop tail
-    */
+  /** `Tuple[1]` is represented as `List(tpe, scala.Tuple$package.EmptyTuple)`, so we drop tail */
   def dropTupleNil(using quotes: Quotes)(ins: List[quotes.reflect.TypeRepr]): List[quotes.reflect.TypeRepr] =
     ins match
       case List(h, t) if t.show.endsWith("EmptyTuple") => List(h)

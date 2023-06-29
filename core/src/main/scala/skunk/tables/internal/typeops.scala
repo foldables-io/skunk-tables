@@ -25,8 +25,7 @@ import skunk.tables.{TypedColumn, IsColumn}
 
 // TypedColumn operations
 
-/** Transform `(TypedColumn[?, a, ?, ?], TypedColumn[?, b, ?, ?])` into `a ~ b`
-  */
+/** Transform `(TypedColumn[?, a, ?, ?], TypedColumn[?, b, ?, ?])` into `a ~ b` */
 type TwiddleTC[C <: Tuple] =
   C match
     case EmptyTuple => Void

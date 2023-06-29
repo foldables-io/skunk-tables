@@ -29,8 +29,7 @@ class CanInsertSuite extends FunSuite:
       .via(columns =>
         (columns.id.from[PersonWithId](_.id),
          columns.first_name.from[PersonWithId](_.firstName),
-         columns.age.from[PersonWithId](_.age)
-        )
+         columns.age.from[PersonWithId](_.age))
       )
 
     assert(ci.columns == List("id", "first_name", "age"))
@@ -48,8 +47,7 @@ class CanInsertSuite extends FunSuite:
         (columns.id.from[PersonWithId](_.id),
          columns.first_name
            .from[PersonWithId](_.firstName), // We can drop this. For some reasons compileErrors doesn't work
-         columns.age.from[PersonWithId](_.age)
-        )
+         columns.age.from[PersonWithId](_.age))
       )
   }
 

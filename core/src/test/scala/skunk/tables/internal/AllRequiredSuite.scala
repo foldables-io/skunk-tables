@@ -45,8 +45,7 @@ class AllRequiredSuite extends FunSuite:
                     TypedColumn["assignee_id", Option[Int], "tasks_items", EmptyTuple.type],
                     TypedColumn["status", Int, "tasks_items", Default],
                     TypedColumn["due", Option[String], "tasks_items", EmptyTuple.type],
-                    TypedColumn["repeating", Option[Int], "tasks_items", EmptyTuple.type]
-    )
+                    TypedColumn["repeating", Option[Int], "tasks_items", EmptyTuple.type])
 
     assert(true)
   }
@@ -90,8 +89,7 @@ class AllRequiredSuite extends FunSuite:
   test("Required returns all non-Option fields in their original order") {
     type Columns = (TypedColumn["one", Boolean, "foo", EmptyTuple],
                     TypedColumn["two", Int, "foo", EmptyTuple],
-                    TypedColumn["three", String, "foo", EmptyTuple]
-    )
+                    TypedColumn["three", String, "foo", EmptyTuple])
 
     assert(constValueTuple[Required[Columns]] == ("one", "two", "three"))
   }
@@ -100,8 +98,7 @@ class AllRequiredSuite extends FunSuite:
   test("Required ignores Option types") {
     type Columns = (TypedColumn["one", Option[Boolean], "foo", EmptyTuple],
                     TypedColumn["two", Int, "foo", EmptyTuple],
-                    TypedColumn["three", Option[String], "foo", Nullable]
-    )
+                    TypedColumn["three", Option[String], "foo", Nullable])
 
     assert(constValueTuple[Required[Columns]] == "one" *: "two" *: EmptyTuple)
   }
@@ -109,8 +106,7 @@ class AllRequiredSuite extends FunSuite:
   test("Required drops fields with Default Constraint") {
     type Columns = (TypedColumn["one", Boolean, "foo", EmptyTuple],
                     TypedColumn["two", Int, "foo", Default],
-                    TypedColumn["three", String, "foo", EmptyTuple]
-    )
+                    TypedColumn["three", String, "foo", EmptyTuple])
 
     assert(constValueTuple[Required[Columns]] == "one" *: "three" *: EmptyTuple)
   }
@@ -119,8 +115,7 @@ class AllRequiredSuite extends FunSuite:
     type Columns =
       (TypedColumn["one", Option[Boolean], "foo", Nullable],
        TypedColumn["two", Option[Int], "foo", Default],
-       TypedColumn["three", String, "foo", UniqueWithDefault],
-      )
+       TypedColumn["three", String, "foo", UniqueWithDefault])
 
     assert(constValueTuple[Required[Columns]] == EmptyTuple)
   }
@@ -129,8 +124,7 @@ class AllRequiredSuite extends FunSuite:
     type Columns =
       (TypedColumn["one", Boolean, "foo", EmptyTuple],
        TypedColumn["two", Int, "foo", EmptyTuple],
-       TypedColumn["three", String, "foo", UniqueWithDefault],
-      )
+       TypedColumn["three", String, "foo", UniqueWithDefault])
 
     type Ins = (TypedColumn.In["one", Int, Boolean], TypedColumn.In["two", Int, Int])
 
@@ -141,13 +135,11 @@ class AllRequiredSuite extends FunSuite:
     type Columns =
       (TypedColumn["one", Boolean, "foo", EmptyTuple],
        TypedColumn["two", Int, "foo", EmptyTuple],
-       TypedColumn["three", String, "foo", UniqueWithDefault],
-      )
+       TypedColumn["three", String, "foo", UniqueWithDefault])
 
     type Ins = (TypedColumn.In["one", Int, Boolean],
                 // Missing required "two"
-                TypedColumn.In["three", Int, Int]
-    )
+                TypedColumn.In["three", Int, Int])
 
     type False = AllRequired.AllMapped[Columns, Ins]
 
@@ -158,8 +150,7 @@ class AllRequiredSuite extends FunSuite:
     type Columns =
       (TypedColumn["one", Boolean, "foo", EmptyTuple],
        TypedColumn["two", Int, "foo", EmptyTuple],
-       TypedColumn["three", String, "foo", UniqueWithDefault],
-      )
+       TypedColumn["three", String, "foo", UniqueWithDefault])
 
     type Ins = (TypedColumn.In["one", Int, Boolean], TypedColumn.In["two", Int, Int])
 

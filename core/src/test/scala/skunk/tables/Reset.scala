@@ -32,8 +32,7 @@ object Reset:
   val resetFile = getClass.getResource("/reset.sql").getFile
   val initial   = getClass.getResource("/prepare.sql").getFile
 
-  /** Prepare a database in one session, then create another for query execution
-    */
+  /** Prepare a database in one session, then create another for query execution */
   def getClean =
     for
       r <- Reset.build.flatten
