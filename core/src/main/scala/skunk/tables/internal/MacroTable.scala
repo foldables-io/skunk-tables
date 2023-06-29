@@ -84,16 +84,16 @@ object MacroTable:
   /** Init phase is when `TableBuilder` knows only information derived from `A`
     * type
     */
-  class InitPhase[Q <: Quotes & Singleton, A](
-      val quotes: Q,
-      val tpe: Type[A],
-      val columnMap: NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))]
-  ) extends MacroTable[Q, A]:
+  class InitPhase[Q <: Quotes & Singleton, A]
+    (val quotes: Q,
+     val tpe: Type[A],
+     val columnMap: NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))]
+    ) extends MacroTable[Q, A]:
     import quotes.reflect.*
 
-    def next(constraints: List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)],
-             tableName: String
-    ): FinalPhase[Q, A] =
+    def next
+      (constraints: List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)], tableName: String)
+      : FinalPhase[Q, A] =
       new FinalPhase[Q, A](quotes, tpe, columnMap, constraints, tableName)
 
     def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]] =
@@ -111,13 +111,13 @@ object MacroTable:
   /** Final phase is when `TableBuilder` went through its methods and got more
     * information from user
     */
-  class FinalPhase[Q <: Quotes & Singleton, A](
-      val quotes: Q,
-      val tpe: Type[A],
-      val columnMap: NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))],
-      val constraints: List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)],
-      val tableName: String
-  ) extends MacroTable[Q, A]:
+  class FinalPhase[Q <: Quotes & Singleton, A]
+    (val quotes: Q,
+     val tpe: Type[A],
+     val columnMap: NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))],
+     val constraints: List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)],
+     val tableName: String
+    ) extends MacroTable[Q, A]:
     import quotes.reflect.*
 
     def getConstraint(label: String): TypeRepr =
@@ -165,9 +165,11 @@ object MacroTable:
 
     new MacroTable.InitPhase(quotes, Type.of[T], columnMap)
 
-  def flattenProduct[T](using quotes: Quotes)(root: List[String])(
-      ls: List[MirrorElem[quotes.type, T, ?]]
-  ): List[(NonEmptyList[String], (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))] =
+  def flattenProduct[T]
+    (using quotes: Quotes)
+    (root: List[String])
+    (ls: List[MirrorElem[quotes.type, T, ?]])
+    : List[(NonEmptyList[String], (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))] =
     import quotes.reflect.*
 
     ls.flatMap { elem =>

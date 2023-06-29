@@ -176,9 +176,10 @@ object MacroDissect:
 
   /** Every branch has only one level of nested dissects
     */
-  def buildBranch[T: Type](using quote: Quotes)(pm: MacroMirror[quotes.type, T])(
-      nestedDissects: List[Option[MacroDissect[quotes.type]]]
-  ) =
+  def buildBranch[T: Type]
+    (using quote: Quotes)
+    (pm: MacroMirror[quotes.type, T])
+    (nestedDissects: List[Option[MacroDissect[quotes.type]]]) =
     import quotes.reflect.*
 
     new MacroDissect.Branch[quotes.type](quote):

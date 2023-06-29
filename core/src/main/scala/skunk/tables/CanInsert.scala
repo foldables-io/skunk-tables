@@ -67,9 +67,11 @@ object CanInsert:
     new CanInsertPartialInit[A] {}
 
   trait CanInsertPartialInit[A]:
-    inline transparent def into[T <: Product, S, C <: NonEmptyTuple](table: Table[T] {
-      type Select = S; type TypedColumns = C
-    }): CanInsertPartialFinal[A, T, S, C] =
+    inline transparent def into[T <: Product, S, C <: NonEmptyTuple]
+      (table: Table[T] {
+        type Select = S; type TypedColumns = C
+      })
+      : CanInsertPartialFinal[A, T, S, C] =
       new CanInsertPartialFinal[A, T, S, C]:
         val tableOfT = table
 
@@ -135,9 +137,10 @@ object CanInsert:
     */
   transparent inline def buildTwiddled[C <: NonEmptyTuple, A](c: C, a: A): Any =
     ${ buildTwiddledImpl[C, A]('c, 'a) }
-  private def buildTwiddledImpl[C <: NonEmptyTuple: Type, A: Type](using
-      Quotes
-  )(cExpr: Expr[C], aExpr: Expr[A]): Expr[Any] =
+  private def buildTwiddledImpl[C <: NonEmptyTuple: Type, A: Type]
+    (using Quotes)
+    (cExpr: Expr[C], aExpr: Expr[A])
+    : Expr[Any] =
     import quotes.reflect.*
 
     TypeRepr.of[C] match

@@ -52,9 +52,10 @@ trait ColumnSelect extends Selectable:
 
 object ColumnSelect:
 
-  private[tables] def buildImpl[T: Type](using quotes: Quotes)(
-      macroTable: MacroTable.FinalPhase[quotes.type, T]
-  ): Expr[ColumnSelect] =
+  private[tables] def buildImpl[T: Type]
+    (using quotes: Quotes)
+    (macroTable: MacroTable.FinalPhase[quotes.type, T])
+    : Expr[ColumnSelect] =
     import quotes.reflect.*
 
     val nameTypeMap = macroTable.columnMap

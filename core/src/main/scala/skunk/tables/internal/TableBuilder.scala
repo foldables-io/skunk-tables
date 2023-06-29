@@ -106,10 +106,11 @@ object TableBuilder:
 
         '{ (new TableBuilder[T] {}).asInstanceOf[Init] }
 
-  extension [P <: Product, N, A, U, D, C, O](builder: TableBuilder[P] {
-    type Name    = N; type Primary  = A; type Unique = U; type Default = D;
-    type Columns = C; type Nullable = O
-  })
+  extension [P <: Product, N, A, U, D, C, O]
+    (builder: TableBuilder[P] {
+      type Name    = N; type Primary  = A; type Unique = U; type Default = D;
+      type Columns = C; type Nullable = O
+    })
     inline transparent def build: Table[P] =
       ${ buildImpl[P, N, A, U, D, C, O] }
 
@@ -165,9 +166,10 @@ object TableBuilder:
           ).asInstanceOf[Final]
         }
 
-  def deconstruct(using quotes: Quotes)(
-      columns: quotes.reflect.TypeRepr
-  ): List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)] =
+  def deconstruct
+    (using quotes: Quotes)
+    (columns: quotes.reflect.TypeRepr)
+    : List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)] =
     import quotes.reflect.*
 
     columns match
@@ -177,18 +179,22 @@ object TableBuilder:
             (l, typedColumn, constraints)
         }
 
-  def addConstraint(using quotes: Quotes)(constraint: quotes.reflect.TypeRepr, labels: List[String])(
-      columns: quotes.reflect.TypeRepr
-  ): quotes.reflect.TypeRepr =
+  def addConstraint
+    (using quotes: Quotes)
+    (constraint: quotes.reflect.TypeRepr, labels: List[String])
+    (columns: quotes.reflect.TypeRepr)
+    : quotes.reflect.TypeRepr =
     import quotes.reflect.*
 
     columns match
       case AppliedType(ref, typedColumns) =>
         AppliedType(ref, typedColumns.map(addConstraintToColumn(constraint, labels)))
 
-  def addConstraintToColumn(using quotes: Quotes)(constraint: quotes.reflect.TypeRepr, labels: List[String])(
-      tpr: quotes.reflect.TypeRepr
-  ): quotes.reflect.TypeRepr =
+  def addConstraintToColumn
+    (using quotes: Quotes)
+    (constraint: quotes.reflect.TypeRepr, labels: List[String])
+    (tpr: quotes.reflect.TypeRepr)
+    : quotes.reflect.TypeRepr =
     import quotes.reflect.*
 
     labels.foldLeft(tpr) { (acc, label) =>
@@ -199,9 +205,10 @@ object TableBuilder:
           other
     }
 
-  def appendTuple(using
-      quotes: Quotes
-  )(tup: quotes.reflect.TypeRepr, toAdd: quotes.reflect.TypeRepr): quotes.reflect.TypeRepr =
+  def appendTuple
+    (using quotes: Quotes)
+    (tup: quotes.reflect.TypeRepr, toAdd: quotes.reflect.TypeRepr)
+    : quotes.reflect.TypeRepr =
     import quotes.reflect.*
 
     tup match
