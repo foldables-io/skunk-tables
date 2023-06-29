@@ -40,6 +40,10 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
 
   def columnMap: NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))]
 
+  /** Get a list of all known table columns. At different stages it would return different amount of
+    * info. At init stage we know only name and `IsColumn` instance. At final stage we know all
+    * constraints.
+    */
   def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]]
 
   /** List of normalized column names, guaranteed to be distinct and non-empty */
@@ -105,6 +109,11 @@ object MacroTable:
       }
 
   /** Final phase is when `TableBuilder` went through its methods and got more information from user
+    *
+    * @param Constraint
+    *   a list of triplets where first element is a name of a column, second is a `TypedColumn` (so
+    *   contains name AND constranits, full info) and third is just a tupled of constraints
+    *   extracted from second element
     */
   class FinalPhase[Q <: Quotes & Singleton, A]
     (val quotes: Q,
@@ -115,9 +124,11 @@ object MacroTable:
     ) extends MacroTable[Q, A]:
     import quotes.reflect.*
 
-    def getConstraint(label: String): TypeRepr =
+    /** Get a tuple of fully-typed constraints for a particular column */
+    def getConstraints(label: String): quotes.reflect.TypeRepr =
       constraints.find((name, _, _) => name == label) match
-        case Some((_, _, tpr)) => tpr
+        case Some((_, _, tpr)) =>
+          tpr
         case None if constraints.isEmpty =>
           TypeRepr
             .of[EmptyTuple] // It means the method being called on first stage
@@ -126,12 +137,20 @@ object MacroTable:
             s"Column with name $label was not found. Check consistency of Table building. Known columns"
           )
 
-    def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]] =
-      columnMap.toList.map { case (n, (t, p)) =>
-        val nameExpr      = Expr(n)
-        val tableNameType = Singleton(Expr(tableName).asTerm).tpe.asType
+    /** Check if a label has `Unique` or `Primary` constraint */
+    def isPrimUniq(label: String): Boolean =
+      val materialized = materializeConstraints[Q](quotes)(getConstraints(label))
+      materialized.contains(TypedColumn.Constraint.Primary.toString) || materialized.contains(
+        TypedColumn.Constraint.Unique.toString
+      )
 
-        val constraint = getConstraint(n)
+    def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]] =
+      val tableNameType = Singleton(Expr(tableName).asTerm).tpe.asType
+
+      columnMap.toList.map { case (n, (t, p)) =>
+        val nameExpr = Expr(n)
+
+        val constraint = getConstraints(n)
 
         (nameExpr.asTerm.tpe.asType, t.asType, tableNameType, constraint.asType) match
           case ('[name], '[tpe], '[tableName], '[constr]) =>
@@ -142,6 +161,54 @@ object MacroTable:
               )
             }
       }
+
+    def getPrimUniqColumns: Expr[Tuple] =
+      Expr.ofTupleFromSeq(getPrimUniqTypedColumnsList)
+
+    def getPrimUniqTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]] =
+      val tableNameType = Singleton(Expr(tableName).asTerm).tpe.asType
+
+      columnMap.toList.flatMap { case (n, (t, p)) =>
+        val nameExpr = Expr(n)
+
+        if isPrimUniq(n) then
+          val constraint = getConstraints(n)
+          val result = (nameExpr.asTerm.tpe.asType, t.asType, tableNameType, constraint.asType) match
+            case ('[name], '[tpe], '[tableName], '[constr]) =>
+              val name = nameExpr.asExprOf[name & SSingleton]
+              '{
+                new TypedColumn[name & SSingleton, tpe, tableName, constr & Tuple](${ name },
+                                                                                   ${ p.asExprOf[IsColumn[tpe]] }
+                )
+              }
+
+          Some(result)
+        else None
+      }
+
+  /** Transform a `TypeRepr` of a single `Constraint` into `String` representation */
+  def getConstraints[Q <: Quotes & Singleton](q: Q)(repr: q.reflect.TypeRepr): Option[String] =
+    import q.reflect.*
+
+    repr match
+      case TermRef(TermRef(TermRef(TermRef(ThisType(_), _), "TypedColumn"), "Constraint"), c) =>
+        Some(c)
+      case _ =>
+        None
+
+  def materializeConstraints[Q <: Quotes & Singleton](q: Q)(repr: q.reflect.TypeRepr): List[String] =
+    import q.reflect.*
+
+    repr match
+      case AppliedType(_, cts) =>
+        cts.map(getConstraints(q)).map {
+          case Some(c) => c
+          case None    => report.errorAndAbort(s"Invalid State: materializeConstraints got invalid constraint with $cts")
+        }
+      case TermRef(_, _) =>
+        Nil // EmptyTuple
+      case TypeRef(_, _) =>
+        Nil
 
   /** Build an init phase of `MacroTable`. At this point there's no info about table (name or
     * constraints). Use `.next` to get to the final phase

@@ -60,7 +60,6 @@ object Insert:
       type Input   = ci.Twiddled
 
       def input: Input =
-        if table.toString == "inventory_lists" then println(s"Transforming ${ci} with $a")
         ci.transform(a)
       def fragment: Fragment[Input] =
         sql"INSERT INTO ${table.toFragment} (${ci.columnsFragment}) VALUES (${ci.encoder})"

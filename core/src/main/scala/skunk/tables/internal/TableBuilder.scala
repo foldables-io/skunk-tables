@@ -113,6 +113,21 @@ object TableBuilder:
     inline transparent def build: Table[P] =
       ${ buildImpl[P, N, A, U, D, C, O] }
 
+  /** @tparam P
+    *   the product we're describing a table for
+    * @tparam N
+    *   a name of the table (a string singleton)
+    * @tparam A
+    *   a tuple of names which we'd like to make primary keys
+    * @tparam U
+    *   a tuple of names which we'd like to make unique
+    * @tparam D
+    *   a tuple of names which have defaults for
+    * @tparam C
+    *   a tuple of all column names in the table
+    * @tparam O
+    *   a tuple of nullable (optional) column names in the table
+    */
   private def buildImpl[P <: Product: Type, N: Type, A: Type, U: Type, D: Type, C: Type, O: Type](using Quotes) =
     import quotes.reflect.*
 
@@ -134,7 +149,8 @@ object TableBuilder:
 
     val macroTable = MacroTable.build[P].next(deconstruct(columns), tableName)
 
-    val mColumns = ColumnSelect.buildImpl[P](macroTable)
+    val allColumnsSelect = ColumnSelect.buildAllImpl[P](macroTable)
+    val getColumnsSelect = ColumnSelect.buildGetImpl[P](macroTable)
 
     val namesUnion: TypeRepr = macroTable.getNamesUnion
 
@@ -144,11 +160,16 @@ object TableBuilder:
 
     val dissectS = Dissect.buildImpl[P]
 
-    (mColumns.asTerm.tpe.asType, namesUnion.asType, mTypedColumns.asTerm.tpe.asType, macroDissect.outType) match
-      case ('[selectType], '[namesUnion], '[typedColumnsType], '[dissectOutType]) =>
+    (allColumnsSelect.asTerm.tpe.asType,
+     getColumnsSelect.asTerm.tpe.asType,
+     namesUnion.asType,
+     mTypedColumns.asTerm.tpe.asType,
+     macroDissect.outType) match
+      case ('[allSelectType], '[getSelectType], '[namesUnion], '[typedColumnsType], '[dissectOutType]) =>
         type Final = Table[P] {
           type TypedColumns = typedColumnsType
-          type Select       = selectType
+          type Select       = allSelectType
+          type SelectGet    = getSelectType
           type ColumnName   = namesUnion
           type Columns      = dissectOutType
         }
@@ -158,7 +179,8 @@ object TableBuilder:
             self =>
             def typedColumns =
               ${ mTypedColumns }.asInstanceOf[self.TypedColumns]
-            val select = ${ mColumns }.asInstanceOf[self.Select]
+            val select    = ${ allColumnsSelect }.asInstanceOf[self.Select]
+            val selectGet = ${ getColumnsSelect }.asInstanceOf[self.SelectGet]
             val dissect = ${ dissectS }
               .asInstanceOf[Dissect.AuxT[P, self.Columns, TwiddleTCN[self.TypedColumns]]]
             val name = Table.Name(${ Expr(tableName) })
@@ -204,6 +226,7 @@ object TableBuilder:
           other
     }
 
+  /** Append an element to tuple on `TypeRepr`-level */
   def appendTuple
     (using quotes: Quotes)
     (tup: quotes.reflect.TypeRepr, toAdd: quotes.reflect.TypeRepr)
@@ -222,11 +245,11 @@ object TableBuilder:
         val tuple = Symbol.requiredClass(s"scala.Tuple${arity}").typeRef
         AppliedType(tuple, toAdd :: Nil)
       case AppliedType(TypeRef(thisType, name), types) =>
-        val arity = name.drop("Tuple".length).toInt
+        val arity = name.drop("Tuple".length).toInt + 1
         val tuple = Symbol.requiredClass(s"scala.Tuple${arity}").typeRef
         AppliedType(tuple, toAdd :: types)
 
-  def materializeTuple(using quotes: Quotes)(repr: quotes.reflect.TypeRepr): List[String] =
+  def materializeTuple(using Quotes)(repr: quotes.reflect.TypeRepr): List[String] =
     import quotes.reflect.*
 
     repr match

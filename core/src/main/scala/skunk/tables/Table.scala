@@ -49,10 +49,16 @@ trait Table[T <: Product]:
   /** Flat tuple of Scala types used in columns */
   type Columns
 
-  /** `Columns` selectable trait, allowing to statically access typed columns */
+  /** `Columns` selectable trait, allowing to statically access all typed columns */
   type Select
 
   def select: Select
+
+  /** `Columns` selectable trait, allowing to statically access only primary or unique typed columns
+    */
+  type SelectGet
+
+  def selectGet: SelectGet
 
   given Conversion[ColumnName, String] =
     name => name.asInstanceOf[String]
@@ -72,9 +78,8 @@ trait Table[T <: Product]:
     val ops = q.apply(select)
     Query.select[F, A, T](name, getColumnNames, ops, decoder)
 
-  // TODO: make sure we're querying at least one primary or unique columns
-  def get[F[_], A](q: Select => TypedColumn.Op[A]): Query[F, "optional", T] =
-    val ops = q.apply(select)
+  def get[F[_], A](q: SelectGet => TypedColumn.Op[A]): Query[F, "optional", T] =
+    val ops = q.apply(selectGet)
     Query.get[F, A, T](name, getColumnNames, ops, decoder)
 
   def insert[F[_], A](using CanInsert[A, T])(a: A) =

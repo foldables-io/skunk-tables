@@ -122,6 +122,7 @@ object TableSuite:
     .of[PersonWithMeta]
     .withName("persons_with_meta")
     .withDefault("id")
+    .withPrimary("id")
     .withDefault("created_at")
     .build
 

@@ -22,17 +22,6 @@ The library is...
   Yet, the paramount goal of Skunk Tables is to make it possible to write the most common statements in a most concise and correct way.
 * Scala 3. Skunk Tables is macro-heavy and uses a lot of shiny new Scala 3 features hence will never be available for Scala 2
 
-## Note about stablity and Roadmap
-
-`skunk-tables` is at its 0.0.x stage. The API will change a lot and everyone is welcome to explore what we can do here.
-
-Next steps:
-
-* Joins
-* Updates
-* Table creation
-* Better complie-time error messages (God bless you if you make a typo on 1+ `Table`s now)
-
 ## Limitations
 
 ### Scala 3
@@ -55,8 +44,8 @@ Below sections assume you're working with Postgres table named `persons` and wit
 
 ```sql
 CREATE TABLE persons (
-  id              SERIAL          PRIMARY KEY,
-  first_name      VARCHAR(32)     NOT NULL,
+  id              SERIAL      PRIMARY KEY,
+  first_name      VARCHAR     NOT NULL,
 )
 ```
 
@@ -115,22 +104,51 @@ session.use(count.run)
 a source of truth for the actual PostgreSQL table. You can pull out things like table name, column names, column operations
 for custom complex SQL fragments:
 
+All string literals in `skunk-tables` are compile-time checked for existence, so if you make a typo for example in a column name
+it will be a compile-time error.
+
+In order to construct a custom `Fragment` you typically want to get other entities as `Fragment`s too.
+`Table` and `TypedColumn` classes have a special `low` namespace, all methods from there return only `Fragment`s (typically, `Fragment[Void]`).
+
 ```scala
-val P = Person.table        // Just a short-hand
+val P = Person.table.low        // Just a short-hand
+val age = Person.table.select.age.low
 
 sql"""
-SELECT  ${P.id}, ${P.firstName}, ${P.lastName}
-FROM    ${P.table}
-WHERE   ${P.age.eql(Codecs.int4)}
+SELECT ${P.pick("first_name", "last_name")}
+FROM   ${P.name}
+WHERE  ${age.eql}
 """
 ```
 
 Results into:
 
 ```sql
-SELECT id, first_name, last_name
-FROM persons
-WHERE age = ${int4}
+SELECT first_name, last_name
+FROM   persons
+WHERE  age = ${int4}
 ```
 
-If you change your class (e.g. field name or type) you also must change your query or it won't compile.
+It might look like not a big win at saving keystrokes, but there are few things to consider:
+
+- Everything comes from a single source of truth, e.g. if you changed a column name in Postgres - you don't have to go over all your queries to find where it was used
+- It adds compile-time safety at operations as well, e.g. only columns of type `Boolean` have `isTrue` or `isFalse` operations and only `LocalDateTime` have `currentTimestamp` operation
+- In future we should be able to combine `Fragment`s coming from different sources:
+
+```scala
+Person.table.count.fragment ~ sql" WHERE ${table.select.age.low.eql}"
+```
+
+
+## Note about stablity and Roadmap
+
+`skunk-tables` is at its 0.0.x stage. The API will change a lot and everyone is welcome to explore what we can do here.
+
+Next steps:
+
+* Joins
+* Updates
+* Table creation
+* Better complie-time error messages (God bless you if you make a typo on 1+ `Table` now)
+* Make `Query` monadic
+

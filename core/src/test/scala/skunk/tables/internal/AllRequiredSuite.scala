@@ -23,32 +23,12 @@ import skunk.tables.TypedColumn
 
 import munit.FunSuite
 
-class AllRequiredSuite extends FunSuite:
+class TypeOpsSuite extends FunSuite:
 
   type Default            = Tuple1[TypedColumn.Constraint.Default.type]
   type Nullable           = Tuple1[TypedColumn.Constraint.Nullable.type]
-  type PrimaryWithDefault = (TypedColumn.Constraint.Default.type, TypedColumn.Constraint.Primary.type)
-  type UniqueWithDefault  = (TypedColumn.Constraint.Default.type, TypedColumn.Constraint.Unique.type)
-
-  test("foo") {
-    object Foo:
-      opaque type Foo = Int
-
-    type Columns = (TypedColumn["id", Int, "tasks_items", PrimaryWithDefault],
-                    TypedColumn["created_at", Int, "tasks_items", Default],
-                    TypedColumn["created_by", Int, "tasks_items", EmptyTuple.type],
-                    TypedColumn["row_version", Int, "tasks_items", Default],
-                    TypedColumn["row_status", Option[Foo.Foo], "tasks_items", EmptyTuple.type],
-                    TypedColumn["updated_at", Option[Int], "tasks_items", EmptyTuple.type],
-                    TypedColumn["updated_by", Option[Int], "tasks_items", EmptyTuple.type],
-                    TypedColumn["title", String, "tasks_items", EmptyTuple.type],
-                    TypedColumn["assignee_id", Option[Int], "tasks_items", EmptyTuple.type],
-                    TypedColumn["status", Int, "tasks_items", Default],
-                    TypedColumn["due", Option[String], "tasks_items", EmptyTuple.type],
-                    TypedColumn["repeating", Option[Int], "tasks_items", EmptyTuple.type])
-
-    assert(true)
-  }
+  type PrimaryWithDefault = Tuple2[TypedColumn.Constraint.Default.type, TypedColumn.Constraint.Primary.type]
+  type UniqueWithDefault  = Tuple2[TypedColumn.Constraint.Default.type, TypedColumn.Constraint.Unique.type]
 
   test("IfIn checks literal type for existence") {
     type Result = IfIn[("one", "two", "three"), "two", 1, 0]

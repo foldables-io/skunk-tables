@@ -51,7 +51,8 @@ trait ColumnSelect extends Selectable:
 
 object ColumnSelect:
 
-  private[tables] def buildImpl[T: Type]
+  /** A constructor to get a `Selectable` for all known columns */
+  private[tables] def buildAllImpl[T: Type]
     (using quotes: Quotes)
     (macroTable: MacroTable.FinalPhase[quotes.type, T])
     : Expr[ColumnSelect] =
@@ -67,7 +68,7 @@ object ColumnSelect:
       .map { case (name, (tpr, _)) => (name, tpr) }
       .foldLeft(TypeRepr.of[ColumnSelect])
       .apply { case (acc, (name, tpr)) =>
-        val constraint = macroTable.getConstraint(name)
+        val constraint = macroTable.getConstraints(name)
         (tpr.asType, Singleton(Expr(name).asTerm).tpe.asType) match
           case ('[tpe], '[name]) =>
             Refinement(parent = acc,
@@ -76,6 +77,47 @@ object ColumnSelect:
                          .of[TypedColumn]
                          .appliedTo(List(Singleton(Expr(name).asTerm).tpe, TypeRepr.of[tpe], tableName, constraint))
             )
+      }
+
+    (typedColumns.asTerm.tpe.asType, refinement.asType) match
+      case ('[typedColumns], '[refinement]) =>
+        '{
+          (new ColumnSelect:
+            self =>
+            val all = ${ typedColumns }.asInstanceOf[self.TypedColumns]
+          ).asInstanceOf[ColumnSelect { type TypedColumns = typedColumns } & refinement]
+        }
+
+  /** A constructor to get a `Selectable` only for default and primary columns. It will be used in
+    * `table.get`
+    */
+  private[tables] def buildGetImpl[T: Type]
+    (using quotes: Quotes)
+    (macroTable: MacroTable.FinalPhase[quotes.type, T])
+    : Expr[ColumnSelect] =
+    import quotes.reflect.*
+
+    val nameTypeMap = macroTable.columnMap
+
+    val typedColumns: Expr[Tuple] = macroTable.getPrimUniqColumns
+
+    val tableName = ConstantType(StringConstant(macroTable.tableName))
+
+    val refinement = nameTypeMap
+      .map { case (name, (tpr, _)) => (name, tpr) }
+      .foldLeft(TypeRepr.of[ColumnSelect])
+      .apply { case (acc, (name, tpr)) =>
+        if macroTable.isPrimUniq(name) then
+          val constraint = macroTable.getConstraints(name)
+          (tpr.asType, Singleton(Expr(name).asTerm).tpe.asType) match
+            case ('[tpe], '[name]) =>
+              Refinement(parent = acc,
+                         name = name,
+                         info = TypeRepr
+                           .of[TypedColumn]
+                           .appliedTo(List(Singleton(Expr(name).asTerm).tpe, TypeRepr.of[tpe], tableName, constraint))
+              )
+        else acc
       }
 
     (typedColumns.asTerm.tpe.asType, refinement.asType) match

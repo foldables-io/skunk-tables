@@ -42,16 +42,6 @@ type TwiddleTCGo[C <: NonEmptyTuple, A <: Tuple] =
       TwiddleTCGo[tail, b1 ~ b2]
     case (TypedColumn[?, b, ?, ?] *: tail, acc) => TwiddleTCGo[tail, acc ~ b]
 
-// Flat version
-// type TwiddleTCN[C <: NonEmptyTuple] =
-//   C match
-//     case TypedColumn[?, c, ?, ?] *: EmptyTuple => c
-//     case TypedColumn[?, c1, ?, ?] *: TypedColumn[?, c2, ?, ?] *: t => TwiddleTCNGo[t, c1 *: c2 *: EmptyTuple]
-// type TwiddleTCNGo[C <: Tuple, A <: Tuple] =
-//   (C, A) match
-//     case (EmptyTuple, acc) => acc
-//     case (TypedColumn[?, c, ?, ?] *: t, acc) => TwiddleTCNGo[t, Append[acc, c]]
-
 /** Same as `TwiddleTC`, but for non-empty tuples */
 type TwiddleTCN[C <: NonEmptyTuple] <: Product =
   C match
