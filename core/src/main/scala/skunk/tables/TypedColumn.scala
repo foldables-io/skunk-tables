@@ -30,6 +30,14 @@ import skunk.implicits.*
   * constraints
   *
   * Both run-time values `name` and `isColumn` can be materialized from type info
+  * @tparam N
+  *   string singleton with column name
+  * @tparam A
+  *   the actual Scala type of the class member
+  * @tparam T
+  *   string singleton with table name
+  * @tparam C
+  *   a list of column constraints
   */
 final case class TypedColumn[N <: Singleton, A, T, C <: Tuple](name: N, primitive: IsColumn[A]):
 
@@ -40,6 +48,8 @@ final case class TypedColumn[N <: Singleton, A, T, C <: Tuple](name: N, primitiv
 
   inline transparent def from[From](get: From => A): TypedColumn.In[N, From, A] =
     TypedColumn.In(get, primitive)
+
+  private[tables] def toFrom[From]: ToColumn[N, A, From, C] = ???
 
   object low:
     def name: Fragment[Void] =
@@ -72,6 +82,14 @@ object TypedColumn:
     case Default
     case Unique
     case Nullable
+
+  final class Insert[N <: Singleton, A, C <: Tuple, In](name: N, isColumn: IsColumn[A]):
+    val n: String = name.toString
+
+    def from(f: In => A): TypedColumn.In[N, In, A] =
+      TypedColumn.In(f, isColumn)
+    def default(value: A): TypedColumn.In[N, In, A] =
+      TypedColumn.In(_ => value, isColumn)
 
   /** Query operation on `TypedColumn` */
   final case class Op[A](fragment: Fragment[A], a: A):

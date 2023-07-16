@@ -16,6 +16,7 @@
 
 package skunk.tables.internal
 
+import scala.deriving.Mirror
 import scala.Singleton as SSingleton
 import scala.quoted.*
 
@@ -24,6 +25,7 @@ import cats.data.NonEmptyList
 import quotidian.{MacroMirror, MirrorElem}
 
 import skunk.tables.{IsColumn, TypedColumn}
+import java.rmi.server.ServerNotActiveException
 
 /** MacroTable is a class containing all information necessary for `Table` synthezis. It can be of
   * two phases, depending on how much information we have about type `A`
@@ -83,7 +85,12 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
 
 object MacroTable:
 
-  /** Init phase is when `TableBuilder` knows only information derived from `A` type */
+  /** Init phase is when `TableBuilder` knows only information derived from `A` type
+    *
+    * @param columnMap
+    *   an ordered list of columns, where key is column name, value is a pair of `TypeRepr` of that
+    *   info and a proof that the type has `IsColumn` (@see flattenProduct)
+    */
   class InitPhase[Q <: Quotes & Singleton, A]
     (val quotes: Q,
      val tpe: Type[A],
@@ -91,6 +98,7 @@ object MacroTable:
     ) extends MacroTable[Q, A]:
     import quotes.reflect.*
 
+    /** As soon as we know constraints and table name - we can move on to `FinalPhase` */
     def next
       (constraints: List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)], tableName: String)
       : FinalPhase[Q, A] =
@@ -110,10 +118,13 @@ object MacroTable:
 
   /** Final phase is when `TableBuilder` went through its methods and got more information from user
     *
-    * @param Constraint
+    * @param columnMap
+    *   an ordered list of columns, where key is column name, value is a pair of `TypeRepr` of that
+    *   info and a proof that the type has `IsColumn` (@see flattenProduct)
+    * @param constraints
     *   a list of triplets where first element is a name of a column, second is a `TypedColumn` (so
-    *   contains name AND constranits, full info) and third is just a tupled of constraints
-    *   extracted from second element
+    *   contains name AND constranits, full info) and third is just a tuple of constraints extracted
+    *   from second element
     */
   class FinalPhase[Q <: Quotes & Singleton, A]
     (val quotes: Q,
@@ -137,9 +148,27 @@ object MacroTable:
             s"Column with name $label was not found. Check consistency of Table building. Known columns"
           )
 
+    def getInsertColumnsList[Insert: Type]: List[Expr[TypedColumn.Insert[?, ?, ?, ?]]] =
+      columnMap
+        .zipWith(NonEmptyList.fromListUnsafe(constraints)) { case ((n, (t, p)), (_, _, c)) => (n, t, p, c) }
+        .toList
+        .map { case (n, t, p, c) =>
+          val nameExpr = Expr(n)
+
+          (nameExpr.asTerm.tpe.asType, t.asType, c.asType) match
+            case ('[name], '[tpe], '[constraints]) =>
+              val name = nameExpr.asExprOf[name & SSingleton]
+              '{
+                new TypedColumn.Insert[name & SSingleton, tpe, constraints & Tuple, Insert](
+                  ${ name },
+                  ${ p.asExprOf[IsColumn[tpe]] }
+                )
+              }
+        }
+
     /** Check if a label has `Unique` or `Primary` constraint */
     def isPrimUniq(label: String): Boolean =
-      val materialized = materializeConstraints[Q](quotes)(getConstraints(label))
+      val materialized = Utils.materializeConstraints[Q](quotes)(getConstraints(label))
       materialized.contains(TypedColumn.Constraint.Primary.toString) || materialized.contains(
         TypedColumn.Constraint.Unique.toString
       )
@@ -186,34 +215,46 @@ object MacroTable:
         else None
       }
 
-  /** Transform a `TypeRepr` of a single `Constraint` into `String` representation */
-  def getConstraints[Q <: Quotes & Singleton](q: Q)(repr: q.reflect.TypeRepr): Option[String] =
-    import q.reflect.*
+  /** This constructors goes the opposite way of `TableBuilder.build
+    *
+    * It looks at a type of *existing in run-time* value of `Table[TT]` and gets there all
+    * information needed to create `MacroTable.FinalPhase`
+    */
+  private[tables] def buildFromExpr[TT: Type](using q: Quotes)(tableExpr: Expr[TT]) =
+    import quotes.reflect.*
 
-    repr match
-      case TermRef(TermRef(TermRef(TermRef(ThisType(_), _), "TypedColumn"), "Constraint"), c) =>
-        Some(c)
-      case _ =>
-        None
+    def getTypedColumns(t: TypeRepr): TypeRepr =
+      t match
+        case Refinement(parent, name, info) if name != Constants.TypedColumnsName => getTypedColumns(parent)
+        case Refinement(_, _, TypeBounds(_, info))                                => info
 
-  def materializeConstraints[Q <: Quotes & Singleton](q: Q)(repr: q.reflect.TypeRepr): List[String] =
-    import q.reflect.*
+    def getOriginType(t: TypeRepr): TypeRepr =
+      t match
+        case Refinement(parent, name, info)              => getOriginType(parent)
+        case AppliedType(TypeRef(_, "Table"), List(tpe)) => tpe
+        case _                                           => report.errorAndAbort("Table type constructor doesn't match the expected structure")
 
-    repr match
-      case AppliedType(_, cts) =>
-        cts.map(getConstraints(q)).map {
-          case Some(c) => c
-          case None    => report.errorAndAbort(s"Invalid State: materializeConstraints got invalid constraint with $cts")
-        }
-      case TermRef(_, _) =>
-        Nil // EmptyTuple
-      case TypeRef(_, _) =>
-        Nil
+    val originType   = getOriginType(tableExpr.asTerm.tpe.widen).asType
+    val typedColumns = getTypedColumns(tableExpr.asTerm.tpe.widen)
+
+    val extracted   = MacroColumn.fromTypedColumns(typedColumns)
+    val columnMap   = extracted.map(_.forColumnMap)
+    val constraints = extracted.map(_.forConstraints)
+    val tableName   = extracted.head.tableName
+
+    originType match
+      case '[t] =>
+        new MacroTable.FinalPhase[q.type, t](q,
+                                             originType.asInstanceOf[Type[t]],
+                                             columnMap,
+                                             constraints.toList,
+                                             tableName
+        )
 
   /** Build an init phase of `MacroTable`. At this point there's no info about table (name or
     * constraints). Use `.next` to get to the final phase
     */
-  def build[T: Type](using quotes: Quotes): MacroTable.InitPhase[quotes.type, T] =
+  def build[T <: Product: Type](using quotes: Quotes): MacroTable.InitPhase[quotes.type, T] =
     import quotes.reflect.*
 
     val mirror = MacroMirror.summonProduct[T]
@@ -230,6 +271,11 @@ object MacroTable:
 
     new MacroTable.InitPhase(quotes, Type.of[T], columnMap)
 
+  /** A recursive funciton deriving all elements of a class member path, e.g. member `baz` in
+    * `Foo(bar: Bar(baz: Baz))` becomes `NEL("bar", "baz")` Names are keys, values are `TypeRepr`
+    * whole information about above `Baz` and last is a proof that `Baz` has `IsColumn` instance,
+    * i.e. there's no deeper elements
+    */
   def flattenProduct[T]
     (using quotes: Quotes)
     (root: List[String])

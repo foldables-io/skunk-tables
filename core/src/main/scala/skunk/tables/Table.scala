@@ -54,8 +54,7 @@ trait Table[T <: Product]:
 
   def select: Select
 
-  /** `Columns` selectable trait, allowing to statically access only primary or unique typed columns
-    */
+  /** `Columns` selectable trait, allowing to statically access primary or unique typed columns */
   type SelectGet
 
   def selectGet: SelectGet

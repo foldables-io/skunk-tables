@@ -16,9 +16,14 @@
 
 package skunk.tables
 
+import scala.deriving.Mirror
 import scala.quoted.*
 
-import skunk.tables.internal.MacroTable
+import cats.data.NonEmptyList
+
+import quotidian.{MacroMirror, MirrorElem}
+
+import skunk.tables.internal.{MacroTable, Constants, MacroColumn}
 
 /** `Columns` is a "selectable" trait, which means the members of it are created dynamically at
   * compile-time. Every member maps a member of case class (`T` param from `Table[T]`) into a
@@ -29,7 +34,15 @@ import skunk.tables.internal.MacroTable
   */
 trait ColumnSelect extends Selectable:
 
-  /** Homongenous tuple of `TypedColumn` */
+  /** Either `TypedColumn` or `TypedColumn.Insert` */
+  type In
+
+  /** A function to extract column name */
+  def getName(in: In): String
+
+  // TODO: do the same about `codec` and use it in `toString`
+
+  /** Homongenous tuple of `In`s */
   type TypedColumns <: NonEmptyTuple
 
   /** A tuple of `TypedColumn`. The actual type is inferred dur synthesis `all` is reserved word in
@@ -37,17 +50,17 @@ trait ColumnSelect extends Selectable:
     */
   def all: TypedColumns
 
-  /** A list of `TypedColumn`. Used as a shortcur only `get` is reserved word in Postgres, so should
-    * not cause collisions
+  /** A list of columns. Used as a shortcur only `get` is reserved word in Postgres, so should not
+    * cause collisions
     */
-  def get: List[TypedColumn[?, ?, ?, ?]] =
-    all.toList.asInstanceOf[List[TypedColumn[?, ?, ?, ?]]]
+  def get: List[In] =
+    all.toList.asInstanceOf[List[In]]
 
   transparent inline def selectDynamic(name: String): Any =
-    get.find(_.n == name).get
+    get.find(column => getName(column) == name).get
 
   override def toString: String =
-    s"ColumnSelect(${get.map(c => s"${c.n}: ${c.primitive.codec.types.mkString(",")}").mkString(", ")})"
+    s"ColumnSelect(${get.map(getName).mkString(", ")})"
 
 object ColumnSelect:
 
@@ -84,8 +97,12 @@ object ColumnSelect:
         '{
           (new ColumnSelect:
             self =>
-            val all = ${ typedColumns }.asInstanceOf[self.TypedColumns]
-          ).asInstanceOf[ColumnSelect { type TypedColumns = typedColumns } & refinement]
+            type In = TypedColumn[?, ?, ?, ?] // Necessary for `getName`
+            val all                                  = ${ typedColumns }.asInstanceOf[self.TypedColumns]
+            def getName(in: TypedColumn[?, ?, ?, ?]) = in.n
+          ).asInstanceOf[
+            ColumnSelect { type In = TypedColumn[?, ?, ?, ?]; type TypedColumns = typedColumns } & refinement
+          ]
         }
 
   /** A constructor to get a `Selectable` only for default and primary columns. It will be used in
@@ -125,6 +142,75 @@ object ColumnSelect:
         '{
           (new ColumnSelect:
             self =>
-            val all = ${ typedColumns }.asInstanceOf[self.TypedColumns]
-          ).asInstanceOf[ColumnSelect { type TypedColumns = typedColumns } & refinement]
+            type In = TypedColumn[?, ?, ?, ?] // Necessary for `getName`
+            val all                                  = ${ typedColumns }.asInstanceOf[self.TypedColumns]
+            def getName(in: TypedColumn[?, ?, ?, ?]) = in.n
+          ).asInstanceOf[
+            ColumnSelect { type In = TypedColumn[?, ?, ?, ?]; type TypedColumns = typedColumns } & refinement
+          ]
+        }
+
+  transparent inline def buildInsert[TT, Insert](table: TT) =
+    ${ buildInsertImpl[TT, Insert]('table) }
+
+  import CanInsert.CanInsertPartialFinal
+
+  private def buildInsertImpl[T: Type, Insert: Type](using Quotes)(tableExpr: Expr[T]) =
+    import quotes.reflect.*
+
+    val macroTable = MacroTable.buildFromExpr(tableExpr)
+
+    val columnSelect              = buildColumnSelect[T, Insert](tableExpr)
+    val typedColumns: Expr[Tuple] = Expr.ofTupleFromSeq(macroTable.getInsertColumnsList[Insert])
+
+    (macroTable.tpe, columnSelect.asTerm.tpe.asType, typedColumns.asTerm.tpe.asType) match
+      case ('[t], '[s], '[c]) =>
+        '{
+          new CanInsertPartialFinal[Insert, t, s, c & NonEmptyTuple]($columnSelect.asInstanceOf[s]) {}
+            .asInstanceOf[CanInsertPartialFinal[Insert, t, s, c & NonEmptyTuple]]
+        }
+
+  private def buildColumnSelect[T: Type, Insert: Type](using Quotes)(tableExpr: Expr[T]) =
+    import quotes.reflect.*
+
+    val macroTable = MacroTable.buildFromExpr(tableExpr)
+
+    val nameTypeMap = macroTable.columnMap.zipWith(NonEmptyList.fromListUnsafe(macroTable.constraints)) {
+      case ((n, (t, _)), (_, _, c)) => (n, t, c)
+    }
+
+    val typedColumns: Expr[Tuple] = Expr.ofTupleFromSeq(macroTable.getInsertColumnsList[Insert])
+
+    val refinement = nameTypeMap
+      .foldLeft(TypeRepr.of[ColumnSelect])
+      .apply { case (acc, (name, tpr, c)) =>
+        (tpr.asType, Singleton(Expr(name).asTerm).tpe.asType, c.asType) match
+          case ('[tpe], '[name], '[constraints]) =>
+            Refinement(parent = acc,
+                       name = name,
+                       info = TypeRepr
+                         .of[TypedColumn.Insert]
+                         .appliedTo(
+                           List(Singleton(Expr(name).asTerm).tpe,
+                                TypeRepr.of[tpe],
+                                TypeRepr.of[constraints],
+                                TypeRepr.of[Insert]
+                           )
+                         )
+            )
+      }
+
+    (typedColumns.asTerm.tpe.asType, refinement.asType) match
+      case ('[typedColumns], '[refinement]) =>
+        '{
+          (new ColumnSelect:
+            self =>
+            type In = TypedColumn.Insert[?, ?, ?, Insert] // Necessary for `getName`
+            def getName(in: TypedColumn.Insert[?, ?, ?, Insert]) = in.n
+            val all                                              = ${ typedColumns }.asInstanceOf[self.TypedColumns]
+          ).asInstanceOf[
+            ColumnSelect {
+              type In = TypedColumn.Insert[?, ?, ?, Insert]; type TypedColumns = typedColumns
+            } & refinement
+          ]
         }

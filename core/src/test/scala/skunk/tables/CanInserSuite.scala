@@ -26,11 +26,7 @@ class CanInsertSuite extends FunSuite:
 
     val ci = CanInsert[PersonWithId]
       .into(table)
-      .via(columns =>
-        (columns.id.from[PersonWithId](_.id),
-         columns.first_name.from[PersonWithId](_.firstName),
-         columns.age.from[PersonWithId](_.age))
-      )
+      .via(columns => (columns.id.from(_.id), columns.first_name.from(_.firstName), columns.age.from(_.age)))
 
     assert(ci.columns == List("id", "first_name", "age"))
 
@@ -44,10 +40,10 @@ class CanInsertSuite extends FunSuite:
     CanInsert[PersonWithId]
       .into(table)
       .via(columns =>
-        (columns.id.from[PersonWithId](_.id),
+        (columns.id.from(_.id),
          columns.first_name
-           .from[PersonWithId](_.firstName), // We can drop this. For some reasons compileErrors doesn't work
-         columns.age.from[PersonWithId](_.age))
+           .from(_.firstName), // We can drop this. For some reasons compileErrors doesn't work
+         columns.age.from(_.age))
       )
   }
 
@@ -58,7 +54,7 @@ class CanInsertSuite extends FunSuite:
 
     CanInsert[PersonWithId]
       .into(table)
-      .via(columns => (columns.id.from[PersonWithId](_.id), columns.age.from[PersonWithId](_.age)))
+      .via(columns => (columns.id.from(_.id), columns.age.from(_.age)))
   }
 
   test("CanInsert can be generated with a single-element mapping") {
@@ -73,5 +69,5 @@ class CanInsertSuite extends FunSuite:
 
     CanInsert[PersonWithId]
       .into(table)
-      .via(columns => Tuple1(columns.id.from[PersonWithId](_.id)))
+      .via(columns => Tuple1(columns.id.from(_.id)))
   }

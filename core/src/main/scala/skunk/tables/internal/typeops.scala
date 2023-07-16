@@ -61,12 +61,12 @@ type NonRequiredConstraints =
 /** All items from `A` are present in `C` */
 type Required[C <: NonEmptyTuple] <: Tuple =
   C match
-    case TypedColumn[n, ?, ?, c] *: t =>
+    case TypedColumn.Insert[n, ?, c, ?] *: t =>
       RequiredGo[t, IfInM[c, NonRequiredConstraints, EmptyTuple, n *: EmptyTuple]]
 type RequiredGo[C <: Tuple, A <: Tuple] <: Tuple =
   C match
     case EmptyTuple => A
-    case TypedColumn[n, ?, ?, c] *: t =>
+    case TypedColumn.Insert[n, ?, c, ?] *: t =>
       RequiredGo[t, IfInM[c, NonRequiredConstraints, A, Append[A, n]]]
 
 /** Get a `TypedColumn` by its label */

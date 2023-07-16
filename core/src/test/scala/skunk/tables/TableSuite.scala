@@ -106,14 +106,10 @@ object TableSuite:
 
   case class PersonNew(id: Int, firstName: String, age: Int)
 
+  val in = CanInsert[PersonNew].into(table)
+
   given CanInsert[PersonNew, Person] =
-    CanInsert[PersonNew]
-      .into(table)
-      .via(columns =>
-        (columns.id.from[PersonNew](_.id),
-         columns.first_name.from[PersonNew](_.firstName),
-         columns.age.from[PersonNew](_.age))
-      )
+    in.via(columns => (columns.id.from(_.id), columns.first_name.from(_.firstName), columns.age.from(_.age)))
 
   case class Meta(id: Int, createdAt: LocalDateTime)
   case class PersonInfo(firstName: String, age: Int)
@@ -129,4 +125,4 @@ object TableSuite:
   given CanInsert[PersonNew, PersonWithMeta] =
     CanInsert[PersonNew]
       .into(tableWithMeta)
-      .via(columns => (columns.first_name.from[PersonNew](_.firstName), columns.age.from[PersonNew](_.age)))
+      .via(columns => (columns.first_name.from(_.firstName), columns.age.from(_.age)))

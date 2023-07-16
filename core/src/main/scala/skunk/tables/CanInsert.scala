@@ -16,6 +16,7 @@
 
 package skunk.tables
 
+import scala.deriving.Mirror
 import scala.compiletime.{erasedValue, constValueTuple, summonInline}
 import scala.quoted.*
 
@@ -64,23 +65,22 @@ object CanInsert:
     new CanInsertPartialInit[A] {}
 
   trait CanInsertPartialInit[A]:
-    inline transparent def into[T <: Product, S, C <: NonEmptyTuple]
-      (table: Table[T] {
-        type Select = S; type TypedColumns = C
-      })
-      : CanInsertPartialFinal[A, T, S, C] =
-      new CanInsertPartialFinal[A, T, S, C]:
-        val tableOfT = table
 
-        override def toString: String =
-          s"CanInsertIntoPartialFinal($tableOfT)"
+    transparent inline def into[TT](table: TT) =
+      ColumnSelect.buildInsert[TT, A](table)
 
-  trait CanInsertPartialFinal[A, T <: Product, S, C <: NonEmptyTuple]:
-
-    val tableOfT: Table[T] {
-      type Select       = S // Selectable
-      type TypedColumns = C // Tuple of all Columns
-    }
+  /** Last stage of `CanInsert` construction
+    *
+    * @tparam A
+    *   a type that we'd like to make insertable
+    * @tparam T
+    *   original table class
+    * @tparam S
+    *   columns `Selectable`
+    * @tparam C
+    *   tuple of known `TypedColumn`s
+    */
+  trait CanInsertPartialFinal[A, T, S, C <: NonEmptyTuple](val insert: S):
 
     /** Last stage of `CanInsert` generation Here we map members of `A` into columns of `Table[T]`
       *
@@ -100,11 +100,11 @@ object CanInsert:
           CanInsert.getCodec[I]
 
         def transform(a: A): Twiddled =
-          val mapping: I = map(tableOfT.select)
+          val mapping: I = map(insert)
           buildTwiddled(mapping, a).asInstanceOf[Twiddled]
 
         override def toString: String =
-          s"""CanInsert(${tableOfT.name}, [${columns.mkString(", ")}])"""
+          s"""CanInsert(, [${columns.mkString(", ")}])"""
 
     // TODO: I need to implement an `auto[N]` constroctor that works if
     // `N`'s members are strict subset of `T` *and* covers all non-nullable,

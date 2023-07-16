@@ -67,44 +67,44 @@ class TypeOpsSuite extends FunSuite:
   }
 
   test("Required returns all non-Option fields in their original order") {
-    type Columns = (TypedColumn["one", Boolean, "foo", EmptyTuple],
-                    TypedColumn["two", Int, "foo", EmptyTuple],
-                    TypedColumn["three", String, "foo", EmptyTuple])
+    type Columns = (TypedColumn.Insert["one", Boolean, EmptyTuple, Nothing],
+                    TypedColumn.Insert["two", Int, EmptyTuple, Nothing],
+                    TypedColumn.Insert["three", String, EmptyTuple, Nothing])
 
     assert(constValueTuple[Required[Columns]] == ("one", "two", "three"))
   }
 
   // @see https://github.com/lampepfl/dotty/issues/17211
   test("Required ignores Option types") {
-    type Columns = (TypedColumn["one", Option[Boolean], "foo", EmptyTuple],
-                    TypedColumn["two", Int, "foo", EmptyTuple],
-                    TypedColumn["three", Option[String], "foo", Nullable])
+    type Columns = (TypedColumn.Insert["one", Option[Boolean], EmptyTuple, Nothing],
+                    TypedColumn.Insert["two", Int, EmptyTuple, Nothing],
+                    TypedColumn.Insert["three", Option[String], Nullable, Nothing])
 
     assert(constValueTuple[Required[Columns]] == "one" *: "two" *: EmptyTuple)
   }
 
   test("Required drops fields with Default Constraint") {
-    type Columns = (TypedColumn["one", Boolean, "foo", EmptyTuple],
-                    TypedColumn["two", Int, "foo", Default],
-                    TypedColumn["three", String, "foo", EmptyTuple])
+    type Columns = (TypedColumn.Insert["one", Boolean, EmptyTuple, Unit],
+                    TypedColumn.Insert["two", Int, Default, Unit],
+                    TypedColumn.Insert["three", String, EmptyTuple, Unit])
 
     assert(constValueTuple[Required[Columns]] == "one" *: "three" *: EmptyTuple)
   }
 
   test("Required can return EmptyTuple") {
     type Columns =
-      (TypedColumn["one", Option[Boolean], "foo", Nullable],
-       TypedColumn["two", Option[Int], "foo", Default],
-       TypedColumn["three", String, "foo", UniqueWithDefault])
+      (TypedColumn.Insert["one", Option[Boolean], Nullable, Nothing],
+       TypedColumn.Insert["two", Option[Int], Default, Nothing],
+       TypedColumn.Insert["three", String, UniqueWithDefault, Nothing])
 
     assert(constValueTuple[Required[Columns]] == EmptyTuple)
   }
 
   test("AllMapped returns true if missing columns has `Default` constraint") {
     type Columns =
-      (TypedColumn["one", Boolean, "foo", EmptyTuple],
-       TypedColumn["two", Int, "foo", EmptyTuple],
-       TypedColumn["three", String, "foo", UniqueWithDefault])
+      (TypedColumn.Insert["one", Boolean, EmptyTuple, Nothing],
+       TypedColumn.Insert["two", Int, EmptyTuple, Nothing],
+       TypedColumn.Insert["three", String, UniqueWithDefault, Nothing])
 
     type Ins = (TypedColumn.In["one", Int, Boolean], TypedColumn.In["two", Int, Int])
 
@@ -113,9 +113,9 @@ class TypeOpsSuite extends FunSuite:
 
   test("AllMapped returns false if one column is missing") {
     type Columns =
-      (TypedColumn["one", Boolean, "foo", EmptyTuple],
-       TypedColumn["two", Int, "foo", EmptyTuple],
-       TypedColumn["three", String, "foo", UniqueWithDefault])
+      (TypedColumn.Insert["one", Boolean, EmptyTuple, Nothing],
+       TypedColumn.Insert["two", Int, EmptyTuple, Nothing],
+       TypedColumn.Insert["three", String, UniqueWithDefault, Nothing])
 
     type Ins = (TypedColumn.In["one", Int, Boolean],
                 // Missing required "two"
@@ -128,9 +128,9 @@ class TypeOpsSuite extends FunSuite:
 
   test("AllMapped should not be synthesized if some columns are missing") {
     type Columns =
-      (TypedColumn["one", Boolean, "foo", EmptyTuple],
-       TypedColumn["two", Int, "foo", EmptyTuple],
-       TypedColumn["three", String, "foo", UniqueWithDefault])
+      (TypedColumn.Insert["one", Boolean, EmptyTuple, Nothing],
+       TypedColumn.Insert["two", Int, EmptyTuple, Nothing],
+       TypedColumn.Insert["three", String, UniqueWithDefault, Nothing])
 
     type Ins = (TypedColumn.In["one", Int, Boolean], TypedColumn.In["two", Int, Int])
 
