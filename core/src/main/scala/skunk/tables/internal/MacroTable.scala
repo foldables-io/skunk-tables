@@ -40,7 +40,7 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
   /** User-provided type of table contents */
   def tpe: Type[A]
 
-  def columnMap: NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))]
+  def columnMap: NonEmptyList[(String, TypeRepr)]
 
   /** Get a list of all known table columns. At different stages it would return different amount of
     * info. At init stage we know only name and `IsColumn` instance. At final stage we know all
@@ -74,9 +74,9 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
 
   /** Get a list of column names where type is some form of `Option` */
   def getNullableColumns: Expr[Tuple] =
-    Expr.ofTupleFromSeq(columnMap.toList.flatMap { case (n, (t, p)) =>
-      val nameExpr = Expr(n)
-      t.dealias.show match
+    Expr.ofTupleFromSeq(columnMap.toList.flatMap { column =>
+      val nameExpr = Expr(column._1)
+      column._2.dealias.show match
         case t if t.startsWith("scala.Option") =>
           Some(nameExpr)
         case _ =>
@@ -92,27 +92,30 @@ object MacroTable:
     *   info and a proof that the type has `IsColumn` (@see flattenProduct)
     */
   class InitPhase[Q <: Quotes & Singleton, A]
-    (val quotes: Q,
-     val tpe: Type[A],
-     val columnMap: NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))]
-    ) extends MacroTable[Q, A]:
+    (val quotes: Q, val tpe: Type[A], val columns: NonEmptyList[MacroColumn.InitPhase[Q]])
+      extends MacroTable[Q, A]:
     import quotes.reflect.*
 
+    def columnMap = columns.map(c => c.name -> c.tpe.asInstanceOf[quotes.reflect.TypeRepr])
+
     /** As soon as we know constraints and table name - we can move on to `FinalPhase` */
-    def next
-      (constraints: NonEmptyList[(String, quotes.reflect.TypeRepr)], tableName: String)
-      : FinalPhase[Q, A] =
-      new FinalPhase[Q, A](quotes, tpe, columnMap, constraints, tableName)
+    def next(constraints: NonEmptyList[TypeRepr], tableName: String): FinalPhase[Q, A] =
+      val cols = columns.zipWith(constraints) { (col, tpr) =>
+        col.next(tableName, tpr.asInstanceOf[col.quotes.reflect.TypeRepr])
+      }
+      new FinalPhase[Q, A](quotes, tpe, cols, tableName)
 
     def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]] =
-      columnMap.toList.map { case (n, (t, p)) =>
-        val nameExpr = Expr(n)
+      columns.toList.map { column =>
+        val nameExpr = Expr(column.name)
 
-        (nameExpr.asTerm.tpe.asType, t.asType) match
+        (nameExpr.asTerm.tpe.asType, column.tpe.asType) match
           case ('[name], '[tpe]) =>
             val name = nameExpr.asExprOf[name & SSingleton]
             '{
-              new TypedColumn[name & SSingleton, tpe, Nothing, EmptyTuple](${ name }, ${ p.asExprOf[IsColumn[tpe]] })
+              new TypedColumn[name & SSingleton, tpe, Nothing, EmptyTuple](${ name },
+                                                                           ${ column.isColumn.asExprOf[IsColumn[tpe]] }
+              )
             }
       }
 
@@ -127,38 +130,34 @@ object MacroTable:
     *   from second element
     */
   class FinalPhase[Q <: Quotes & Singleton, A]
-    (val quotes: Q,
-     val tpe: Type[A],
-     val columnMap: NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))],
-     val constraints: NonEmptyList[(String, quotes.reflect.TypeRepr)],
-     val tableName: String
-    ) extends MacroTable[Q, A]:
+    (val quotes: Q, val tpe: Type[A], val columns: NonEmptyList[MacroColumn.FinalPhase[Q]], val tableName: String)
+      extends MacroTable[Q, A]:
     import quotes.reflect.*
+
+    def columnMap = columns.map(c => c.name -> c.tpe.asInstanceOf[quotes.reflect.TypeRepr])
 
     /** Get a tuple of fully-typed constraints for a particular column */
     def getConstraints(label: String): quotes.reflect.TypeRepr =
-      constraints.toList.find((name, _) => name == label) match
-        case Some((_, tpr)) =>
-          tpr
+      columns.find(column => column.name == label) match
+        case Some(column) =>
+          column.constraints.asInstanceOf[quotes.reflect.TypeRepr]
         case None =>
           report.errorAndAbort(
             s"Column with name $label was not found. Check consistency of Table building. Known columns"
           )
 
     def getInsertColumnsList[Insert: Type]: List[Expr[TypedColumn.Insert[?, ?, ?, ?]]] =
-      columnMap
-        .zipWith(constraints) { case ((n, (t, p)), (_, c)) => (n, t, p, c) }
-        .toList
-        .map { case (n, t, p, c) =>
-          val nameExpr = Expr(n)
+      columns.toList
+        .map { column =>
+          val nameExpr = Expr(column.name)
 
-          (nameExpr.asTerm.tpe.asType, t.asType, c.asType) match
+          (nameExpr.asTerm.tpe.asType, column.tpe.asType, column.constraints.asType) match
             case ('[name], '[tpe], '[constraints]) =>
               val name = nameExpr.asExprOf[name & SSingleton]
               '{
                 new TypedColumn.Insert[name & SSingleton, tpe, constraints & Tuple, Insert](
                   ${ name },
-                  ${ p.asExprOf[IsColumn[tpe]] }
+                  ${ column.isColumn.asExprOf[IsColumn[tpe]] }
                 )
               }
         }
@@ -173,17 +172,18 @@ object MacroTable:
     def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]] =
       val tableNameType = Singleton(Expr(tableName).asTerm).tpe.asType
 
-      columnMap.toList.map { case (n, (t, p)) =>
-        val nameExpr = Expr(n)
+      columns.toList.map { column =>
+        val nameExpr = Expr(column.name)
 
-        val constraint = getConstraints(n)
+        val constraint = getConstraints(column.name)
 
-        (nameExpr.asTerm.tpe.asType, t.asType, tableNameType, constraint.asType) match
+        (nameExpr.asTerm.tpe.asType, column.tpe.asType, tableNameType, constraint.asType) match
           case ('[name], '[tpe], '[tableName], '[constr]) =>
             val name = nameExpr.asExprOf[name & SSingleton]
             '{
-              new TypedColumn[name & SSingleton, tpe, tableName, constr & Tuple](${ name },
-                                                                                 ${ p.asExprOf[IsColumn[tpe]] }
+              new TypedColumn[name & SSingleton, tpe, tableName, constr & Tuple](
+                ${ name },
+                ${ column.isColumn.asExprOf[IsColumn[tpe]] }
               )
             }
       }
@@ -194,17 +194,18 @@ object MacroTable:
     def getPrimUniqTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]] =
       val tableNameType = Singleton(Expr(tableName).asTerm).tpe.asType
 
-      columnMap.toList.flatMap { case (n, (t, p)) =>
-        val nameExpr = Expr(n)
+      columns.toList.flatMap { column =>
+        val nameExpr = Expr(column.name)
 
-        if isPrimUniq(n) then
-          val constraint = getConstraints(n)
-          val result = (nameExpr.asTerm.tpe.asType, t.asType, tableNameType, constraint.asType) match
+        if isPrimUniq(column.name) then
+          val constraint = getConstraints(column.name)
+          val result = (nameExpr.asTerm.tpe.asType, column.tpe.asType, tableNameType, constraint.asType) match
             case ('[name], '[tpe], '[tableName], '[constr]) =>
               val name = nameExpr.asExprOf[name & SSingleton]
               '{
-                new TypedColumn[name & SSingleton, tpe, tableName, constr & Tuple](${ name },
-                                                                                   ${ p.asExprOf[IsColumn[tpe]] }
+                new TypedColumn[name & SSingleton, tpe, tableName, constr & Tuple](
+                  ${ name },
+                  ${ column.isColumn.asExprOf[IsColumn[tpe]] }
                 )
               }
 
@@ -229,25 +230,18 @@ object MacroTable:
       t match
         case Refinement(parent, name, info)              => getOriginType(parent)
         case AppliedType(TypeRef(_, "Table"), List(tpe)) => tpe
-        case _                                           => report.errorAndAbort("Table type constructor doesn't match the expected structure")
+        case other                                       => report.errorAndAbort(s"Table type constructor doesn't match the expected structure. Got $other")
 
     val originType   = getOriginType(tableExpr.asTerm.tpe.widen).asType
     val typedColumns = getTypedColumns(tableExpr.asTerm.tpe.widen)
 
     val extracted   = MacroColumn.fromTypedColumns(typedColumns)
-    println(extracted.map(_.toColumnType.show))
-    val columnMap   = extracted.map(_.forColumnMap)
     val constraints = extracted.map(_.forConstraints)
     val tableName   = extracted.head.tableName
 
     originType match
       case '[t] =>
-        new MacroTable.FinalPhase[q.type, t](q,
-                                             originType.asInstanceOf[Type[t]],
-                                             columnMap,
-                                             constraints,
-                                             tableName
-        )
+        new MacroTable.FinalPhase[q.type, t](q, originType.asInstanceOf[Type[t]], extracted, tableName)
 
   /** Build an init phase of `MacroTable`. At this point there's no info about table (name or
     * constraints). Use `.next` to get to the final phase
@@ -259,11 +253,12 @@ object MacroTable:
 
     val columnMap =
       NonEmptyList.fromList(flattenProduct[T](Nil)(mirror.elems).map((path, tpe) => snakeCase(path.last) -> tpe)) match
-        case Some(nel) => nel
+        case Some(nel) =>
+          nel.map { case (name, (tpe, isColumn)) => new MacroColumn.InitPhase(quotes, name, tpe, isColumn) }
         case None =>
           report.errorAndAbort("Could not derive columns. A Columns must contain at least one Column")
 
-    val names = columnMap.map(_._1)
+    val names = columnMap.map(_.name)
     if names.distinct.length != names.length
     then report.errorAndAbort(s"Not all column names are unique (${names.toList.mkString(", ")})")
 

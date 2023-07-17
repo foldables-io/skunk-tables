@@ -65,7 +65,6 @@ object InsertSelect:
     val tableName = ConstantType(StringConstant(macroTable.tableName))
 
     val refinement = nameTypeMap
-      .map { case (name, (tpr, _)) => (name, tpr) }
       .foldLeft(TypeRepr.of[InsertSelect[?]])
       .apply { case (acc, (name, tpr)) =>
         val constraint = macroTable.getConstraints(name)

@@ -189,22 +189,16 @@ object TableBuilder:
           ).asInstanceOf[Final]
         }
 
-  def deconstruct
-    (using quotes: Quotes)
-    (columns: quotes.reflect.TypeRepr)
-    : NonEmptyList[(String, quotes.reflect.TypeRepr)] =
+  def deconstruct(using quotes: Quotes)(columns: quotes.reflect.TypeRepr): NonEmptyList[quotes.reflect.TypeRepr] =
     import quotes.reflect.*
 
     columns match
       case AppliedType(_, typedColumns) =>
-        val list = typedColumns.map {
-          case typedColumn @ AppliedType(ref, List(ConstantType(StringConstant(l)), tref, tableName, constraints)) =>
-            (l, constraints)
-        }
+        val list = typedColumns.map { case AppliedType(_, List(_, _, _, constraints)) => constraints }
 
         NonEmptyList.fromList(list) match
           case Some(nel) => nel
-          case None => report.errorAndAbort("Columns cannot be an EmptyTuple")
+          case None      => report.errorAndAbort("Columns cannot be an EmptyTuple")
 
   def addConstraint
     (using quotes: Quotes)

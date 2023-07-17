@@ -25,27 +25,47 @@ import quotidian.{MacroMirror, MirrorElem}
 import skunk.tables.IsColumn
 
 /** Compile-time counterpart of `TypedColumn` */
-final class MacroColumn[Q <: Quotes & Singleton]
-  (val quotes: Q,
-   val name: String,
-   val tpe: quotes.reflect.TypeRepr,
-   val constraints: quotes.reflect.TypeRepr,
-   val tableName: String,
-   val isColumn: Expr[IsColumn[?]]
-  ):
+sealed trait MacroColumn[Q <: Quotes & Singleton]:
+  val quotes: Q
 
-  def toColumnType: quotes.reflect.TypeRepr =
+  import quotes.reflect.*
+
+  def name: String
+  def tpe: TypeRepr
+  def constraints: TypeRepr
+  def tableName: String
+  def isColumn: Expr[IsColumn[?]]
+
+  def toColumnType: TypeRepr =
     import quotes.reflect.*
 
     val tycon = Symbol.requiredClass(s"skunk.${Constants.TablesPackageName}.${Constants.TypedColumnName}").typeRef
-    AppliedType(tycon, List(ConstantType(StringConstant(name)), tpe, ConstantType(StringConstant(tableName)), constraints))
+    AppliedType(tycon,
+                List(ConstantType(StringConstant(name)), tpe, ConstantType(StringConstant(tableName)), constraints)
+    )
 
-  def forColumnMap: (String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]])) =
+  def forColumnMap: (String, (TypeRepr, Expr[IsColumn[?]])) =
     name -> (tpe, isColumn)
-  def forConstraints: (String, quotes.reflect.TypeRepr) =
+  def forConstraints: (String, TypeRepr) =
     (name, constraints)
 
 object MacroColumn:
+  final class InitPhase[Q <: Quotes & Singleton]
+    (val quotes: Q, val name: String, val tpe: quotes.reflect.TypeRepr, val isColumn: Expr[IsColumn[?]]):
+    override def toString: String = s"MacroColumn.InitPhase($name, ${tpe.show})"
+    def next(tableName: String, constraints: quotes.reflect.TypeRepr): FinalPhase[Q] =
+      new FinalPhase(quotes, name, tpe, constraints, tableName, isColumn)
+
+  final class FinalPhase[Q <: Quotes & Singleton]
+    (val quotes: Q,
+     val name: String,
+     val tpe: quotes.reflect.TypeRepr,
+     val constraints: quotes.reflect.TypeRepr,
+     val tableName: String,
+     val isColumn: Expr[IsColumn[?]]
+    ) extends MacroColumn[Q]:
+    override def toString: String = s"MacroColumn.FinalPhase($name, ${tpe.show}, ${constraints.show}, $tableName)"
+
   def isTypedColumn(using q: Quotes)(typeRef: q.reflect.TypeRepr): Boolean =
     import q.reflect.*
 
@@ -53,7 +73,7 @@ object MacroColumn:
       case TypeRef(ThisType(TypeRef(_, Constants.TablesPackageName)), Constants.TypedColumnName) => true
       case _                                                                                     => false
 
-  def fromTypedColumn(using q: Quotes)(typedColumn: q.reflect.TypeRepr): MacroColumn[q.type] =
+  def fromTypedColumn(using q: Quotes)(typedColumn: q.reflect.TypeRepr): MacroColumn.FinalPhase[q.type] =
     import q.reflect.*
 
     typedColumn match
@@ -68,20 +88,20 @@ object MacroColumn:
               case '[tpe] =>
                 Expr.summon[IsColumn[tpe]] match
                   case Some(isColumn) =>
-                    new MacroColumn(q, name, typeRepr, constraints, tableName, isColumn)
+                    new MacroColumn.FinalPhase(q, name, typeRepr, constraints, tableName, isColumn)
                   case None => report.errorAndAbort(s"Cannot summon IsColumn for ${typeRepr.show}")
           case _ =>
             report.errorAndAbort(s"Applied types of ${typedColumn.show} don't TypedColumn structure with 4 type holes")
       case _ =>
         report.errorAndAbort(s"TypeRepr ${typedColumn.show} doesn't match expected TypedColumn structure")
 
-  def fromTypedColumns(using q: Quotes)(appliedType: q.reflect.TypeRepr): NonEmptyList[MacroColumn[q.type]] =
+  def fromTypedColumns(using q: Quotes)(appliedType: q.reflect.TypeRepr): NonEmptyList[MacroColumn.FinalPhase[q.type]] =
     import q.reflect.*
 
     appliedType match
       case AppliedType(_, columns) =>
         NonEmptyList.fromList(columns.map(fromTypedColumn)) match
-          case Some(nel) => nel.asInstanceOf[NonEmptyList[MacroColumn[q.type]]]
+          case Some(nel) => nel.asInstanceOf[NonEmptyList[MacroColumn.FinalPhase[q.type]]]
           case None      => report.errorAndAbort("Resulting table has no columns")
       case _ =>
         report.errorAndAbort(

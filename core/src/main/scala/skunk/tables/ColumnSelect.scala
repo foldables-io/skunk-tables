@@ -78,7 +78,7 @@ object ColumnSelect:
     val tableName = ConstantType(StringConstant(macroTable.tableName))
 
     val refinement = nameTypeMap
-      .map { case (name, (tpr, _)) => (name, tpr) }
+      .map { case (name, tpr) => (name, tpr) }
       .foldLeft(TypeRepr.of[ColumnSelect])
       .apply { case (acc, (name, tpr)) =>
         val constraint = macroTable.getConstraints(name)
@@ -121,7 +121,6 @@ object ColumnSelect:
     val tableName = ConstantType(StringConstant(macroTable.tableName))
 
     val refinement = nameTypeMap
-      .map { case (name, (tpr, _)) => (name, tpr) }
       .foldLeft(TypeRepr.of[ColumnSelect])
       .apply { case (acc, (name, tpr)) =>
         if macroTable.isPrimUniq(name) then
@@ -175,9 +174,7 @@ object ColumnSelect:
 
     val macroTable = MacroTable.buildFromExpr(tableExpr)
 
-    val nameTypeMap = macroTable.columnMap.zipWith(macroTable.constraints) {
-      case ((n, (t, _)), (_, c)) => (n, t, c)
-    }
+    val nameTypeMap = macroTable.columns.map(column => (column.name, column.tpe, column.constraints))
 
     val typedColumns: Expr[Tuple] = Expr.ofTupleFromSeq(macroTable.getInsertColumnsList[Insert])
 
