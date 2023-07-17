@@ -34,9 +34,9 @@ object Utils:
     import q.reflect.*
 
     repr match
-      case TermRef(TermRef(TermRef(TermRef(ThisType(_), _), Constants.TypedColumnName), "Constraint"), c) =>
+      case TypeRef(ThisType(TypeRef(ThisType(TypeRef(_, _)),_)), c) =>
         Some(c)
-      case _ =>
+      case a =>
         None
 
   /** Get a (compile-time) type of `constraints` tuple and transform them into a run-time `String`
@@ -54,3 +54,27 @@ object Utils:
         Nil // EmptyTuple
       case TypeRef(_, _) =>
         Nil
+
+
+  /** Append an element to tuple on `TypeRepr`-level */
+  def appendTuple
+    (using quotes: Quotes)
+    (tup: quotes.reflect.TypeRepr, toAdd: quotes.reflect.TypeRepr)
+    : quotes.reflect.TypeRepr =
+    import quotes.reflect.*
+
+    tup match
+      case TypeRef(TermRef(_, _), "Nothing") =>
+        report.errorAndAbort("Your TypedColumn is missing constraints type parameter")
+      case TypeRef(TermRef(_, _), "EmptyTuple") =>
+        val arity = 1
+        val tuple = Symbol.requiredClass(s"scala.Tuple${arity}").typeRef
+        AppliedType(tuple, toAdd :: Nil)
+      case TermRef(TermRef(_, _), "EmptyTuple") =>
+        val arity = 1
+        val tuple = Symbol.requiredClass(s"scala.Tuple${arity}").typeRef
+        AppliedType(tuple, toAdd :: Nil)
+      case AppliedType(TypeRef(thisType, name), types) =>
+        val arity = name.drop("Tuple".length).toInt + 1
+        val tuple = Symbol.requiredClass(s"scala.Tuple${arity}").typeRef
+        AppliedType(tuple, toAdd :: types)

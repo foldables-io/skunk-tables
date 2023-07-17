@@ -99,10 +99,7 @@ object MacroTable:
     def columnMap = columns.map(c => c.name -> c.tpe.asInstanceOf[quotes.reflect.TypeRepr])
 
     /** As soon as we know constraints and table name - we can move on to `FinalPhase` */
-    def next(constraints: NonEmptyList[TypeRepr], tableName: String): FinalPhase[Q, A] =
-      val cols = columns.zipWith(constraints) { (col, tpr) =>
-        col.next(tableName, tpr.asInstanceOf[col.quotes.reflect.TypeRepr])
-      }
+    def next(cols: NonEmptyList[MacroColumn.FinalPhase[Q]], tableName: String): FinalPhase[Q, A] =
       new FinalPhase[Q, A](quotes, tpe, cols, tableName)
 
     def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]] =
@@ -165,9 +162,7 @@ object MacroTable:
     /** Check if a label has `Unique` or `Primary` constraint */
     def isPrimUniq(label: String): Boolean =
       val materialized = Utils.materializeConstraints[Q](quotes)(getConstraints(label))
-      materialized.contains(TypedColumn.Constraint.Primary.toString) || materialized.contains(
-        TypedColumn.Constraint.Unique.toString
-      )
+      materialized.contains(TypedColumn.Constraint.Primary.toString) || materialized.contains(TypedColumn.Constraint.Unique.toString)
 
     def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]] =
       val tableNameType = Singleton(Expr(tableName).asTerm).tpe.asType
@@ -210,7 +205,8 @@ object MacroTable:
               }
 
           Some(result)
-        else None
+        else 
+          None
       }
 
   /** This constructors goes the opposite way of `TableBuilder.build
@@ -235,9 +231,8 @@ object MacroTable:
     val originType   = getOriginType(tableExpr.asTerm.tpe.widen).asType
     val typedColumns = getTypedColumns(tableExpr.asTerm.tpe.widen)
 
-    val extracted   = MacroColumn.fromTypedColumns(typedColumns)
-    val constraints = extracted.map(_.forConstraints)
-    val tableName   = extracted.head.tableName
+    val extracted = MacroColumn.fromTypedColumns(typedColumns)
+    val tableName = extracted.head.tableName
 
     originType match
       case '[t] =>

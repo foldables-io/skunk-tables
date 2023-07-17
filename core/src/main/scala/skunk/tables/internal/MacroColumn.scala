@@ -22,7 +22,7 @@ import cats.data.NonEmptyList
 
 import quotidian.{MacroMirror, MirrorElem}
 
-import skunk.tables.IsColumn
+import skunk.tables.{IsColumn, TypedColumn}
 
 /** Compile-time counterpart of `TypedColumn` */
 sealed trait MacroColumn[Q <: Quotes & Singleton]:
@@ -44,26 +44,79 @@ sealed trait MacroColumn[Q <: Quotes & Singleton]:
                 List(ConstantType(StringConstant(name)), tpe, ConstantType(StringConstant(tableName)), constraints)
     )
 
-  def forColumnMap: (String, (TypeRepr, Expr[IsColumn[?]])) =
-    name -> (tpe, isColumn)
-  def forConstraints: (String, TypeRepr) =
-    (name, constraints)
-
 object MacroColumn:
   final class InitPhase[Q <: Quotes & Singleton]
     (val quotes: Q, val name: String, val tpe: quotes.reflect.TypeRepr, val isColumn: Expr[IsColumn[?]]):
     override def toString: String = s"MacroColumn.InitPhase($name, ${tpe.show})"
-    def next(tableName: String, constraints: quotes.reflect.TypeRepr): FinalPhase[Q] =
-      new FinalPhase(quotes, name, tpe, constraints, tableName, isColumn)
+    def next(tableName: String): FinalPhase[Q] =
+      given Quotes = quotes
+      import quotes.reflect.*
+      new FinalPhase(quotes, name, tpe, isColumn, Nil, tableName)
+
+  object InitPhase:
+    def fromTypedColumn(using q: Quotes)(typedColumn: q.reflect.TypeRepr): MacroColumn.InitPhase[q.type] =
+      import q.reflect.*
+
+      typedColumn match
+        case AppliedType(tpe, columns) if isTypedColumn(tpe) =>
+          columns match
+            case List(ConstantType(StringConstant(name)), typeRepr, _, _) =>
+              typeRepr.asType match
+                case '[tpe] =>
+                  Expr.summon[IsColumn[tpe]] match
+                    case Some(isColumn) =>
+                      new MacroColumn.InitPhase(q, name, typeRepr, isColumn)
+                    case None => report.errorAndAbort(s"Cannot summon IsColumn for ${typeRepr.show}")
+            case _ =>
+              report.errorAndAbort(
+                s"Applied types of ${typedColumn.show} don't TypedColumn structure with 4 type holes"
+              )
+        case _ =>
+          report.errorAndAbort(s"TypeRepr ${typedColumn.show} doesn't match expected TypedColumn structure")
+
+    def fromTypedColumns
+      (using q: Quotes)
+      (appliedType: q.reflect.TypeRepr)
+      : NonEmptyList[MacroColumn.InitPhase[q.type]] =
+      import q.reflect.*
+
+      appliedType match
+        case AppliedType(_, columns) =>
+          NonEmptyList.fromList(columns.map(fromTypedColumn)) match
+            case Some(nel) => nel.asInstanceOf[NonEmptyList[MacroColumn.InitPhase[q.type]]]
+            case None      => report.errorAndAbort("Resulting table has no columns")
+        case _ =>
+          report.errorAndAbort(
+            s"TypeRepr ${appliedType.show} doesn't match expected structure of tuple of $Constants.TypedColumnsName"
+          )
 
   final class FinalPhase[Q <: Quotes & Singleton]
     (val quotes: Q,
      val name: String,
      val tpe: quotes.reflect.TypeRepr,
-     val constraints: quotes.reflect.TypeRepr,
-     val tableName: String,
-     val isColumn: Expr[IsColumn[?]]
+     val isColumn: Expr[IsColumn[?]],
+     val cs: List[TypedColumn.Constraint],
+     val tableName: String
     ) extends MacroColumn[Q]:
+
+    def addConstraint(constraint: TypedColumn.Constraint): FinalPhase[Q] =
+      import quotes.reflect.*
+      given Quotes = quotes
+      tpe.asType match
+        case '[t] =>
+          new FinalPhase(quotes, name, TypeRepr.of[t], isColumn, (constraint :: cs).distinct, tableName)
+
+    val constraints: quotes.reflect.TypeRepr =
+      import quotes.reflect.*
+      given Quotes = quotes
+
+      val KeyObj = TypeRepr.of[TypedColumn.Constraint.type].classSymbol.get
+      val typeRefs = cs.map(c => KeyObj.fieldMember(c.toString).termRef)
+      if typeRefs.isEmpty then
+        given Quotes = quotes
+        Expr(EmptyTuple).asTerm.tpe
+      else defn.TupleClass(typeRefs.length).typeRef.dealias.appliedTo(typeRefs)
+
     override def toString: String = s"MacroColumn.FinalPhase($name, ${tpe.show}, ${constraints.show}, $tableName)"
 
   def isTypedColumn(using q: Quotes)(typeRef: q.reflect.TypeRepr): Boolean =
@@ -73,8 +126,13 @@ object MacroColumn:
       case TypeRef(ThisType(TypeRef(_, Constants.TablesPackageName)), Constants.TypedColumnName) => true
       case _                                                                                     => false
 
+
   def fromTypedColumn(using q: Quotes)(typedColumn: q.reflect.TypeRepr): MacroColumn.FinalPhase[q.type] =
     import q.reflect.*
+
+    def getConstraints(tpe: TypeRepr): List[TypedColumn.Constraint] =
+      val c = Utils.materializeConstraints(q)(tpe)
+      List(TypedColumn.Constraint.Unique)
 
     typedColumn match
       case AppliedType(tpe, columns) if isTypedColumn(tpe) =>
@@ -88,7 +146,7 @@ object MacroColumn:
               case '[tpe] =>
                 Expr.summon[IsColumn[tpe]] match
                   case Some(isColumn) =>
-                    new MacroColumn.FinalPhase(q, name, typeRepr, constraints, tableName, isColumn)
+                    new MacroColumn.FinalPhase(q, name, typeRepr, isColumn, getConstraints(constraints), tableName) // TODO!!!
                   case None => report.errorAndAbort(s"Cannot summon IsColumn for ${typeRepr.show}")
           case _ =>
             report.errorAndAbort(s"Applied types of ${typedColumn.show} don't TypedColumn structure with 4 type holes")
@@ -107,3 +165,5 @@ object MacroColumn:
         report.errorAndAbort(
           s"TypeRepr ${appliedType.show} doesn't match expected structure of tuple of $Constants.TypedColumnsName"
         )
+
+

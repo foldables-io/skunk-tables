@@ -130,8 +130,14 @@ object TableBuilder:
     * @tparam O
     *   a tuple of nullable (optional) column names in the table
     */
-  private def buildImpl[P <: Product: Type, N: Type, A: Type, U: Type, D: Type, C: Type, O: Type](using Quotes) =
+  private def buildImpl[P <: Product: Type, N: Type, A: Type, U: Type, D: Type, C: Type, O: Type](using q: Quotes) =
     import quotes.reflect.*
+
+    def addConstraint(constraint: TypedColumn.Constraint, labels: List[String])
+      (columns: NonEmptyList[MacroColumn.FinalPhase[q.type]])
+      : NonEmptyList[MacroColumn.FinalPhase[q.type]] =
+      columns.map(col => if labels.contains(col.name) then col.addConstraint(constraint) else col)
+
 
     val tableName = TypeRepr.of[N] match
       case ConstantType(StringConstant(name)) => name
@@ -141,15 +147,16 @@ object TableBuilder:
     val default  = materializeTuple(TypeRepr.of[D])
     val nullable = materializeTuple(TypeRepr.of[O])
 
-    val unconstrainedColumns = TypeRepr.of[C]
+    val unconstrainedColumns =
+      MacroColumn.InitPhase.fromTypedColumns(TypeRepr.of[C]).map(_.next(tableName))
 
-    val columns = addConstraint(Primary, primary)
-      .andThen(addConstraint(Unique, unique))
-      .andThen(addConstraint(Default, default))
-      .andThen(addConstraint(Nullable, nullable))
+    val columns = addConstraint(TypedColumn.Constraint.Primary, primary)
+      .andThen(addConstraint(TypedColumn.Constraint.Unique, unique))
+      .andThen(addConstraint(TypedColumn.Constraint.Default, default))
+      .andThen(addConstraint(TypedColumn.Constraint.Nullable, nullable))
       .apply(unconstrainedColumns)
 
-    val macroTable = MacroTable.build[P].next(deconstruct(columns), tableName)
+    val macroTable = MacroTable.build[P].next(columns, tableName)
 
     val allColumnsSelect = ColumnSelect.buildAllImpl[P](macroTable)
     val getColumnsSelect = ColumnSelect.buildGetImpl[P](macroTable)
@@ -187,7 +194,9 @@ object TableBuilder:
               .asInstanceOf[Dissect.AuxT[P, self.Columns, TwiddleTCN[self.TypedColumns]]]
             val name = Table.Name(${ Expr(tableName) })
           ).asInstanceOf[Final]
+
         }
+
 
   def deconstruct(using quotes: Quotes)(columns: quotes.reflect.TypeRepr): NonEmptyList[quotes.reflect.TypeRepr] =
     import quotes.reflect.*
@@ -200,55 +209,7 @@ object TableBuilder:
           case Some(nel) => nel
           case None      => report.errorAndAbort("Columns cannot be an EmptyTuple")
 
-  def addConstraint
-    (using quotes: Quotes)
-    (constraint: quotes.reflect.TypeRepr, labels: List[String])
-    (columns: quotes.reflect.TypeRepr)
-    : quotes.reflect.TypeRepr =
-    import quotes.reflect.*
-
-    columns match
-      case AppliedType(ref, typedColumns) =>
-        AppliedType(ref, typedColumns.map(addConstraintToColumn(constraint, labels)))
-
-  def addConstraintToColumn
-    (using quotes: Quotes)
-    (constraint: quotes.reflect.TypeRepr, labels: List[String])
-    (tpr: quotes.reflect.TypeRepr)
-    : quotes.reflect.TypeRepr =
-    import quotes.reflect.*
-
-    labels.foldLeft(tpr) { (acc, label) =>
-      acc match
-        case AppliedType(ref, List(ConstantType(StringConstant(l)), tref, tableName, constraints)) if label == l =>
-          AppliedType(ref, List(ConstantType(StringConstant(l)), tref, tableName, appendTuple(constraints, constraint)))
-        case other =>
-          other
-    }
-
-  /** Append an element to tuple on `TypeRepr`-level */
-  def appendTuple
-    (using quotes: Quotes)
-    (tup: quotes.reflect.TypeRepr, toAdd: quotes.reflect.TypeRepr)
-    : quotes.reflect.TypeRepr =
-    import quotes.reflect.*
-
-    tup match
-      case TypeRef(TermRef(_, _), "Nothing") =>
-        report.errorAndAbort("Your TypedColumn is missing constraints type parameter")
-      case TypeRef(TermRef(_, _), "EmptyTuple") =>
-        val arity = 1
-        val tuple = Symbol.requiredClass(s"scala.Tuple${arity}").typeRef
-        AppliedType(tuple, toAdd :: Nil)
-      case TermRef(TermRef(_, _), "EmptyTuple") =>
-        val arity = 1
-        val tuple = Symbol.requiredClass(s"scala.Tuple${arity}").typeRef
-        AppliedType(tuple, toAdd :: Nil)
-      case AppliedType(TypeRef(thisType, name), types) =>
-        val arity = name.drop("Tuple".length).toInt + 1
-        val tuple = Symbol.requiredClass(s"scala.Tuple${arity}").typeRef
-        AppliedType(tuple, toAdd :: types)
-
+  /** Transform tuple of literal string types into `List` */
   def materializeTuple(using Quotes)(repr: quotes.reflect.TypeRepr): List[String] =
     import quotes.reflect.*
 
@@ -265,19 +226,3 @@ object TableBuilder:
         Nil // EmptyTuple
       case TypeRef(_, _) =>
         Nil
-
-  def Unique(using quotes: Quotes) =
-    import quotes.reflect.*
-    TypeRepr.of[TypedColumn.Constraint.Unique.type]
-
-  def Primary(using quotes: Quotes) =
-    import quotes.reflect.*
-    TypeRepr.of[TypedColumn.Constraint.Primary.type]
-
-  def Default(using quotes: Quotes) =
-    import quotes.reflect.*
-    TypeRepr.of[TypedColumn.Constraint.Default.type]
-
-  def Nullable(using quotes: Quotes) =
-    import quotes.reflect.*
-    TypeRepr.of[TypedColumn.Constraint.Nullable.type]

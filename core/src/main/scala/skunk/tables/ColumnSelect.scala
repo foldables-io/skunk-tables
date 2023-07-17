@@ -149,6 +149,29 @@ object ColumnSelect:
           ]
         }
 
+
+  object Example:
+    enum Key:
+      case One
+      case Two
+
+  transparent inline def check[TT] =
+    ${ checkImpl[TT] }
+
+  private def checkImpl[T: Type](using Quotes) =
+    import quotes.reflect.*
+
+    val KeyObj = TypeRepr.of[Example.Key.type].classSymbol.get
+    val in = KeyObj.memberField(Example.Key.One.toString).termRef
+    println(in)
+
+    val tpe = TypeRepr.of[T]
+    println(tpe)
+    println(tpe.show)
+      
+    '{ () }
+
+
   transparent inline def buildInsert[TT, Insert](table: TT) =
     ${ buildInsertImpl[TT, Insert]('table) }
 
