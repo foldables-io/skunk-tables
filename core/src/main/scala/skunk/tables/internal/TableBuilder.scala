@@ -18,6 +18,8 @@ package skunk.tables.internal
 
 import scala.quoted.*
 
+import cats.data.NonEmptyList
+
 import skunk.tables.{TypedColumn, Table, ColumnSelect, Dissect}
 
 /** A factory, providing set of configuration methods, such as `withUnique`, `withName` to configure
@@ -190,15 +192,19 @@ object TableBuilder:
   def deconstruct
     (using quotes: Quotes)
     (columns: quotes.reflect.TypeRepr)
-    : List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)] =
+    : NonEmptyList[(String, quotes.reflect.TypeRepr)] =
     import quotes.reflect.*
 
     columns match
       case AppliedType(_, typedColumns) =>
-        typedColumns.map {
+        val list = typedColumns.map {
           case typedColumn @ AppliedType(ref, List(ConstantType(StringConstant(l)), tref, tableName, constraints)) =>
-            (l, typedColumn, constraints)
+            (l, constraints)
         }
+
+        NonEmptyList.fromList(list) match
+          case Some(nel) => nel
+          case None => report.errorAndAbort("Columns cannot be an EmptyTuple")
 
   def addConstraint
     (using quotes: Quotes)

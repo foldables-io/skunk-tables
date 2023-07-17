@@ -100,7 +100,7 @@ object MacroTable:
 
     /** As soon as we know constraints and table name - we can move on to `FinalPhase` */
     def next
-      (constraints: List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)], tableName: String)
+      (constraints: NonEmptyList[(String, quotes.reflect.TypeRepr)], tableName: String)
       : FinalPhase[Q, A] =
       new FinalPhase[Q, A](quotes, tpe, columnMap, constraints, tableName)
 
@@ -130,19 +130,16 @@ object MacroTable:
     (val quotes: Q,
      val tpe: Type[A],
      val columnMap: NonEmptyList[(String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]]))],
-     val constraints: List[(String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr)],
+     val constraints: NonEmptyList[(String, quotes.reflect.TypeRepr)],
      val tableName: String
     ) extends MacroTable[Q, A]:
     import quotes.reflect.*
 
     /** Get a tuple of fully-typed constraints for a particular column */
     def getConstraints(label: String): quotes.reflect.TypeRepr =
-      constraints.find((name, _, _) => name == label) match
-        case Some((_, _, tpr)) =>
+      constraints.toList.find((name, _) => name == label) match
+        case Some((_, tpr)) =>
           tpr
-        case None if constraints.isEmpty =>
-          TypeRepr
-            .of[EmptyTuple] // It means the method being called on first stage
         case None =>
           report.errorAndAbort(
             s"Column with name $label was not found. Check consistency of Table building. Known columns"
@@ -150,7 +147,7 @@ object MacroTable:
 
     def getInsertColumnsList[Insert: Type]: List[Expr[TypedColumn.Insert[?, ?, ?, ?]]] =
       columnMap
-        .zipWith(NonEmptyList.fromListUnsafe(constraints)) { case ((n, (t, p)), (_, _, c)) => (n, t, p, c) }
+        .zipWith(constraints) { case ((n, (t, p)), (_, c)) => (n, t, p, c) }
         .toList
         .map { case (n, t, p, c) =>
           val nameExpr = Expr(n)
@@ -238,6 +235,7 @@ object MacroTable:
     val typedColumns = getTypedColumns(tableExpr.asTerm.tpe.widen)
 
     val extracted   = MacroColumn.fromTypedColumns(typedColumns)
+    println(extracted.map(_.toColumnType.show))
     val columnMap   = extracted.map(_.forColumnMap)
     val constraints = extracted.map(_.forConstraints)
     val tableName   = extracted.head.tableName
@@ -247,7 +245,7 @@ object MacroTable:
         new MacroTable.FinalPhase[q.type, t](q,
                                              originType.asInstanceOf[Type[t]],
                                              columnMap,
-                                             constraints.toList,
+                                             constraints,
                                              tableName
         )
 

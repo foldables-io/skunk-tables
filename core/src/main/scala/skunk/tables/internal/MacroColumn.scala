@@ -27,17 +27,23 @@ import skunk.tables.IsColumn
 /** Compile-time counterpart of `TypedColumn` */
 final class MacroColumn[Q <: Quotes & Singleton]
   (val quotes: Q,
-   val original: quotes.reflect.TypeRepr,
    val name: String,
    val tpe: quotes.reflect.TypeRepr,
    val constraints: quotes.reflect.TypeRepr,
    val tableName: String,
    val isColumn: Expr[IsColumn[?]]
   ):
+
+  def toColumnType: quotes.reflect.TypeRepr =
+    import quotes.reflect.*
+
+    val tycon = Symbol.requiredClass(s"skunk.${Constants.TablesPackageName}.${Constants.TypedColumnName}").typeRef
+    AppliedType(tycon, List(ConstantType(StringConstant(name)), tpe, ConstantType(StringConstant(tableName)), constraints))
+
   def forColumnMap: (String, (quotes.reflect.TypeRepr, Expr[IsColumn[?]])) =
     name -> (tpe, isColumn)
-  def forConstraints: (String, quotes.reflect.TypeRepr, quotes.reflect.TypeRepr) =
-    (name, tpe, constraints)
+  def forConstraints: (String, quotes.reflect.TypeRepr) =
+    (name, constraints)
 
 object MacroColumn:
   def isTypedColumn(using q: Quotes)(typeRef: q.reflect.TypeRepr): Boolean =
@@ -62,7 +68,7 @@ object MacroColumn:
               case '[tpe] =>
                 Expr.summon[IsColumn[tpe]] match
                   case Some(isColumn) =>
-                    new MacroColumn(q, typedColumn, name, typeRepr, constraints, tableName, isColumn)
+                    new MacroColumn(q, name, typeRepr, constraints, tableName, isColumn)
                   case None => report.errorAndAbort(s"Cannot summon IsColumn for ${typeRepr.show}")
           case _ =>
             report.errorAndAbort(s"Applied types of ${typedColumn.show} don't TypedColumn structure with 4 type holes")

@@ -175,8 +175,8 @@ object ColumnSelect:
 
     val macroTable = MacroTable.buildFromExpr(tableExpr)
 
-    val nameTypeMap = macroTable.columnMap.zipWith(NonEmptyList.fromListUnsafe(macroTable.constraints)) {
-      case ((n, (t, _)), (_, _, c)) => (n, t, c)
+    val nameTypeMap = macroTable.columnMap.zipWith(macroTable.constraints) {
+      case ((n, (t, _)), (_, c)) => (n, t, c)
     }
 
     val typedColumns: Expr[Tuple] = Expr.ofTupleFromSeq(macroTable.getInsertColumnsList[Insert])
