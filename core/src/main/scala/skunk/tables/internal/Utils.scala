@@ -57,7 +57,6 @@ object Utils:
       case TypeRef(_, _) =>
         Nil
 
-
   /** Append an element to tuple on `TypeRepr`-level */
   def appendTuple
     (using quotes: Quotes)

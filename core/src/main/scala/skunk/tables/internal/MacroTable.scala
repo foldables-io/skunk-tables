@@ -16,6 +16,8 @@
 
 package skunk.tables.internal
 
+import java.rmi.server.ServerNotActiveException
+
 import scala.deriving.Mirror
 import scala.Singleton as SSingleton
 import scala.quoted.*
@@ -25,7 +27,6 @@ import cats.data.NonEmptyList
 import quotidian.{MacroMirror, MirrorElem}
 
 import skunk.tables.{IsColumn, TypedColumn}
-import java.rmi.server.ServerNotActiveException
 
 /** MacroTable is a class containing all information necessary for `Table` synthezis. It can be of
   * two phases, depending on how much information we have about type `A`
@@ -137,7 +138,7 @@ object MacroTable:
     def getConstraints(label: String): quotes.reflect.TypeRepr =
       columns.find(column => column.name == label) match
         case Some(column) =>
-          MacroColumn.mkCons(quotes)(column.cs)
+          MacroColumn.constraintsTuple(quotes)(column.constraints)
         case None =>
           report.errorAndAbort(
             s"Column with name $label was not found. Check consistency of Table building. Known columns"
@@ -148,7 +149,9 @@ object MacroTable:
         .map { column =>
           val nameExpr = Expr(column.name)
 
-          (nameExpr.asTerm.tpe.asType, column.tpe.asType, MacroColumn.mkCons(quotes)(column.cs).asType) match
+          (nameExpr.asTerm.tpe.asType,
+           column.tpe.asType,
+           MacroColumn.constraintsTuple(quotes)(column.constraints).asType) match
             case ('[name], '[tpe], '[constraints]) =>
               val name = nameExpr.asExprOf[name & SSingleton]
               '{
@@ -162,7 +165,10 @@ object MacroTable:
     /** Check if a label has `Unique` or `Primary` constraint */
     def isPrimUniq(label: String): Boolean =
       columns.find(column => column.name == label) match
-        case Some(col) => col.cs.contains(TypedColumn.Constraint.Primary) || col.cs.contains(TypedColumn.Constraint.Unique)
+        case Some(col) =>
+          col.constraints.contains(TypedColumn.Constraint.Primary) || col.constraints.contains(
+            TypedColumn.Constraint.Unique
+          )
         case None => false
 
     def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]] =
@@ -171,7 +177,7 @@ object MacroTable:
       columns.toList.map { column =>
         val nameExpr = Expr(column.name)
 
-        val constraint = MacroColumn.mkCons(quotes)(column.cs)
+        val constraint = MacroColumn.constraintsTuple(quotes)(column.constraints)
 
         (nameExpr.asTerm.tpe.asType, column.tpe.asType, tableNameType, constraint.asType) match
           case ('[name], '[tpe], '[tableName], '[constr]) =>
@@ -194,7 +200,7 @@ object MacroTable:
         val nameExpr = Expr(column.name)
 
         if isPrimUniq(column.name) then
-          val constraint = MacroColumn.mkCons(quotes)(column.cs)
+          val constraint = MacroColumn.constraintsTuple(quotes)(column.constraints)
           val result = (nameExpr.asTerm.tpe.asType, column.tpe.asType, tableNameType, constraint.asType) match
             case ('[name], '[tpe], '[tableName], '[constr]) =>
               val name = nameExpr.asExprOf[name & SSingleton]
@@ -206,8 +212,7 @@ object MacroTable:
               }
 
           Some(result)
-        else 
-          None
+        else None
       }
 
   /** This constructors goes the opposite way of `TableBuilder.build

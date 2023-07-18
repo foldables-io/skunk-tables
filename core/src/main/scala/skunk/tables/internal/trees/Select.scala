@@ -8,8 +8,10 @@ final case class FromItem(items: NonEmptyList[String])
 enum Disctinct:
   /** Default, not disctinct */
   case All
+
   /** `DISTINCT` */
   case Distinct
+
   /** `DISTINCT ON` */
   case DistinctOn(expression: TODO)
 
@@ -19,4 +21,5 @@ enum What:
 
 final case class Condition(item: TODO)
 
-final case class Select(distinct: Disctinct, what: What, from: Option[FromItem], where: Option[Condition], having: Option[Condition])
+final case class Select
+  (distinct: Disctinct, what: What, from: Option[FromItem], where: Option[Condition], having: Option[Condition])

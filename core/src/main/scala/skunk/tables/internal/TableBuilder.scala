@@ -133,11 +133,11 @@ object TableBuilder:
   private def buildImpl[P <: Product: Type, N: Type, A: Type, U: Type, D: Type, C: Type, O: Type](using q: Quotes) =
     import quotes.reflect.*
 
-    def addConstraint(constraint: TypedColumn.Constraint, labels: List[String])
+    def addConstraint
+      (constraint: TypedColumn.Constraint, labels: List[String])
       (columns: NonEmptyList[MacroColumn.FinalPhase[q.type]])
       : NonEmptyList[MacroColumn.FinalPhase[q.type]] =
       columns.map(col => if labels.contains(col.name) then col.addConstraint(constraint) else col)
-
 
     val tableName = TypeRepr.of[N] match
       case ConstantType(StringConstant(name)) => name
@@ -196,7 +196,6 @@ object TableBuilder:
           ).asInstanceOf[Final]
 
         }
-
 
   def deconstruct(using quotes: Quotes)(columns: quotes.reflect.TypeRepr): NonEmptyList[quotes.reflect.TypeRepr] =
     import quotes.reflect.*
