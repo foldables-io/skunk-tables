@@ -108,6 +108,52 @@ object MacroColumn:
 
     override def toString: String = s"MacroColumn.FinalPhase($name, ${tpe.show}, ${constraints}, $tableName)"
 
+  object FinalPhase:
+    def fromTypedColumn(using q: Quotes)(typedColumn: q.reflect.TypeRepr): MacroColumn.FinalPhase[q.type] =
+      import q.reflect.*
+
+      def getConstraints(tpe: TypeRepr): List[TypedColumn.Constraint] =
+        Utils.materializeConstraints(q)(tpe).map(TypedColumn.Constraint.valueOf)
+
+      typedColumn match
+        case AppliedType(tpe, columns) if isTypedColumn(tpe) =>
+          columns match
+            case List(ConstantType(StringConstant(name)),
+                      typeRepr,
+                      ConstantType(StringConstant(tableName)),
+                      constraints
+                ) =>
+              typeRepr.asType match
+                case '[tpe] =>
+                  Expr.summon[IsColumn[tpe]] match
+                    case Some(isColumn) =>
+                      new MacroColumn.FinalPhase(q,
+                                                 name,
+                                                 typeRepr,
+                                                 isColumn,
+                                                 getConstraints(constraints),
+                                                 tableName
+                      ) // TODO!!!
+                    case None => report.errorAndAbort(s"Cannot summon IsColumn for ${typeRepr.show}")
+            case _ =>
+              report.errorAndAbort(s"Applied types of ${typedColumn.show} don't TypedColumn structure with 4 type holes")
+        case _ =>
+          report.errorAndAbort(s"TypeRepr ${typedColumn.show} doesn't match expected TypedColumn structure")
+
+    def fromTypedColumns(using q: Quotes)(appliedType: q.reflect.TypeRepr): NonEmptyList[MacroColumn.FinalPhase[q.type]] =
+      import q.reflect.*
+
+      appliedType match
+        case AppliedType(_, columns) =>
+          NonEmptyList.fromList(columns.map(fromTypedColumn)) match
+            case Some(nel) => nel.asInstanceOf[NonEmptyList[MacroColumn.FinalPhase[q.type]]]
+            case None      => report.errorAndAbort("Resulting table has no columns")
+        case _ =>
+          report.errorAndAbort(
+            s"TypeRepr ${appliedType.show} doesn't match expected structure of tuple of $Constants.TypedColumnsName"
+          )
+
+
   def constraintsTuple[Q <: Quotes & Singleton](q: Q)(cs: List[TypedColumn.Constraint]): q.reflect.TypeRepr =
     import q.reflect.*
     given Quotes = q
@@ -125,46 +171,3 @@ object MacroColumn:
       case TypeRef(ThisType(TypeRef(_, Constants.TablesPackageName)), Constants.TypedColumnName) => true
       case _                                                                                     => false
 
-  def fromTypedColumn(using q: Quotes)(typedColumn: q.reflect.TypeRepr): MacroColumn.FinalPhase[q.type] =
-    import q.reflect.*
-
-    def getConstraints(tpe: TypeRepr): List[TypedColumn.Constraint] =
-      Utils.materializeConstraints(q)(tpe).map(TypedColumn.Constraint.valueOf)
-
-    typedColumn match
-      case AppliedType(tpe, columns) if isTypedColumn(tpe) =>
-        columns match
-          case List(ConstantType(StringConstant(name)),
-                    typeRepr,
-                    ConstantType(StringConstant(tableName)),
-                    constraints
-              ) =>
-            typeRepr.asType match
-              case '[tpe] =>
-                Expr.summon[IsColumn[tpe]] match
-                  case Some(isColumn) =>
-                    new MacroColumn.FinalPhase(q,
-                                               name,
-                                               typeRepr,
-                                               isColumn,
-                                               getConstraints(constraints),
-                                               tableName
-                    ) // TODO!!!
-                  case None => report.errorAndAbort(s"Cannot summon IsColumn for ${typeRepr.show}")
-          case _ =>
-            report.errorAndAbort(s"Applied types of ${typedColumn.show} don't TypedColumn structure with 4 type holes")
-      case _ =>
-        report.errorAndAbort(s"TypeRepr ${typedColumn.show} doesn't match expected TypedColumn structure")
-
-  def fromTypedColumns(using q: Quotes)(appliedType: q.reflect.TypeRepr): NonEmptyList[MacroColumn.FinalPhase[q.type]] =
-    import q.reflect.*
-
-    appliedType match
-      case AppliedType(_, columns) =>
-        NonEmptyList.fromList(columns.map(fromTypedColumn)) match
-          case Some(nel) => nel.asInstanceOf[NonEmptyList[MacroColumn.FinalPhase[q.type]]]
-          case None      => report.errorAndAbort("Resulting table has no columns")
-      case _ =>
-        report.errorAndAbort(
-          s"TypeRepr ${appliedType.show} doesn't match expected structure of tuple of $Constants.TypedColumnsName"
-        )

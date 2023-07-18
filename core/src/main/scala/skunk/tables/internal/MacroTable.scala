@@ -97,7 +97,7 @@ object MacroTable:
       extends MacroTable[Q, A]:
     import quotes.reflect.*
 
-    def columnMap = columns.map(c => c.name -> c.tpe.asInstanceOf[quotes.reflect.TypeRepr])
+    def columnMap = columns.map(c => c.name -> c.tpe.asInstanceOf[TypeRepr])
 
     /** As soon as we know constraints and table name - we can move on to `FinalPhase` */
     def next(cols: NonEmptyList[MacroColumn.FinalPhase[Q]], tableName: String): FinalPhase[Q, A] =
@@ -132,7 +132,7 @@ object MacroTable:
       extends MacroTable[Q, A]:
     import quotes.reflect.*
 
-    def columnMap = columns.map(c => c.name -> c.tpe.asInstanceOf[quotes.reflect.TypeRepr])
+    def columnMap = columns.map(c => c.name -> c.tpe.asInstanceOf[TypeRepr])
 
     /** Get a tuple of fully-typed constraints for a particular column */
     def getConstraints(label: String): quotes.reflect.TypeRepr =
@@ -237,7 +237,7 @@ object MacroTable:
     val originType   = getOriginType(tableExpr.asTerm.tpe.widen).asType
     val typedColumns = getTypedColumns(tableExpr.asTerm.tpe.widen)
 
-    val extracted = MacroColumn.fromTypedColumns(typedColumns)
+    val extracted = MacroColumn.FinalPhase.fromTypedColumns(typedColumns)
     val tableName = extracted.head.tableName
 
     originType match
