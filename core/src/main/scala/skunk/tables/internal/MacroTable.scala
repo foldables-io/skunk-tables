@@ -137,7 +137,7 @@ object MacroTable:
     def getConstraints(label: String): quotes.reflect.TypeRepr =
       columns.find(column => column.name == label) match
         case Some(column) =>
-          column.constraints.asInstanceOf[quotes.reflect.TypeRepr]
+          MacroColumn.mkCons(quotes)(column.cs)
         case None =>
           report.errorAndAbort(
             s"Column with name $label was not found. Check consistency of Table building. Known columns"
@@ -148,7 +148,7 @@ object MacroTable:
         .map { column =>
           val nameExpr = Expr(column.name)
 
-          (nameExpr.asTerm.tpe.asType, column.tpe.asType, column.constraints.asType) match
+          (nameExpr.asTerm.tpe.asType, column.tpe.asType, MacroColumn.mkCons(quotes)(column.cs).asType) match
             case ('[name], '[tpe], '[constraints]) =>
               val name = nameExpr.asExprOf[name & SSingleton]
               '{
@@ -161,8 +161,9 @@ object MacroTable:
 
     /** Check if a label has `Unique` or `Primary` constraint */
     def isPrimUniq(label: String): Boolean =
-      val materialized = Utils.materializeConstraints[Q](quotes)(getConstraints(label))
-      materialized.contains(TypedColumn.Constraint.Primary.toString) || materialized.contains(TypedColumn.Constraint.Unique.toString)
+      columns.find(column => column.name == label) match
+        case Some(col) => col.cs.contains(TypedColumn.Constraint.Primary) || col.cs.contains(TypedColumn.Constraint.Unique)
+        case None => false
 
     def getTypedColumnsList: List[Expr[TypedColumn[?, ?, ?, ?]]] =
       val tableNameType = Singleton(Expr(tableName).asTerm).tpe.asType
@@ -170,7 +171,7 @@ object MacroTable:
       columns.toList.map { column =>
         val nameExpr = Expr(column.name)
 
-        val constraint = getConstraints(column.name)
+        val constraint = MacroColumn.mkCons(quotes)(column.cs)
 
         (nameExpr.asTerm.tpe.asType, column.tpe.asType, tableNameType, constraint.asType) match
           case ('[name], '[tpe], '[tableName], '[constr]) =>
@@ -193,7 +194,7 @@ object MacroTable:
         val nameExpr = Expr(column.name)
 
         if isPrimUniq(column.name) then
-          val constraint = getConstraints(column.name)
+          val constraint = MacroColumn.mkCons(quotes)(column.cs)
           val result = (nameExpr.asTerm.tpe.asType, column.tpe.asType, tableNameType, constraint.asType) match
             case ('[name], '[tpe], '[tableName], '[constr]) =>
               val name = nameExpr.asExprOf[name & SSingleton]

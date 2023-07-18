@@ -32,17 +32,9 @@ sealed trait MacroColumn[Q <: Quotes & Singleton]:
 
   def name: String
   def tpe: TypeRepr
-  def constraints: TypeRepr
   def tableName: String
   def isColumn: Expr[IsColumn[?]]
 
-  def toColumnType: TypeRepr =
-    import quotes.reflect.*
-
-    val tycon = Symbol.requiredClass(s"skunk.${Constants.TablesPackageName}.${Constants.TypedColumnName}").typeRef
-    AppliedType(tycon,
-                List(ConstantType(StringConstant(name)), tpe, ConstantType(StringConstant(tableName)), constraints)
-    )
 
 object MacroColumn:
   final class InitPhase[Q <: Quotes & Singleton]
@@ -99,6 +91,14 @@ object MacroColumn:
      val tableName: String
     ) extends MacroColumn[Q]:
 
+    def toColumnType: quotes.reflect.TypeRepr =
+      import quotes.reflect.*
+
+      val tycon = Symbol.requiredClass(s"skunk.${Constants.TablesPackageName}.${Constants.TypedColumnName}").typeRef
+      AppliedType(tycon,
+                  List(ConstantType(StringConstant(name)), tpe, ConstantType(StringConstant(tableName)), constraints)
+      )
+
     def addConstraint(constraint: TypedColumn.Constraint): FinalPhase[Q] =
       import quotes.reflect.*
       given Quotes = quotes
@@ -110,14 +110,25 @@ object MacroColumn:
       import quotes.reflect.*
       given Quotes = quotes
 
-      val KeyObj = TypeRepr.of[TypedColumn.Constraint.type].classSymbol.get
-      val typeRefs = cs.map(c => KeyObj.fieldMember(c.toString).termRef)
+      val ConstraintObj = TypeRepr.of[TypedColumn.Constraint.type].classSymbol.get
+      val typeRefs = cs.map(item => ConstraintObj.fieldMember(item.toString).termRef)
+
       if typeRefs.isEmpty then
         given Quotes = quotes
         Expr(EmptyTuple).asTerm.tpe
       else defn.TupleClass(typeRefs.length).typeRef.dealias.appliedTo(typeRefs)
 
     override def toString: String = s"MacroColumn.FinalPhase($name, ${tpe.show}, ${constraints.show}, $tableName)"
+
+  def mkCons[Q <: Quotes & Singleton](q: Q)(cs: List[TypedColumn.Constraint]): q.reflect.TypeRepr =
+    import q.reflect.*
+    given Quotes = q
+
+    val ConstraintObj = TypeRepr.of[TypedColumn.Constraint.type].classSymbol.get
+    val typeRefs = cs.map(item => ConstraintObj.fieldMember(item.toString).termRef)
+
+    if typeRefs.isEmpty then TypeRepr.of[EmptyTuple]
+    else defn.TupleClass(typeRefs.length).typeRef.dealias.appliedTo(typeRefs)
 
   def isTypedColumn(using q: Quotes)(typeRef: q.reflect.TypeRepr): Boolean =
     import q.reflect.*

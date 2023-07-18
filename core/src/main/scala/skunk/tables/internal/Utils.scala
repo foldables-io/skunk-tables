@@ -34,9 +34,11 @@ object Utils:
     import q.reflect.*
 
     repr match
-      case TypeRef(ThisType(TypeRef(ThisType(TypeRef(_, _)),_)), c) =>
+      case TypeRef(ThisType(_), c) =>
         Some(c)
-      case a =>
+      case TermRef(ThisType(_), c) =>
+        Some(c)
+      case _ =>
         None
 
   /** Get a (compile-time) type of `constraints` tuple and transform them into a run-time `String`
