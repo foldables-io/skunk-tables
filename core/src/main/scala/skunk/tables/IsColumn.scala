@@ -38,32 +38,32 @@ trait IsColumn[A]:
   override def toString: String = codec.toString
 
 object IsColumn:
-  inline def IsColumn[A](c: Codec[A]) = new IsColumn[A]:
+  inline def ofCodec[A](c: Codec[A]) = new IsColumn[A]:
     def codec: Codec[A] = c
 
   def apply[A](using ev: IsColumn[A]): IsColumn[A] = ev
 
-  inline given [A: IsColumn]: IsColumn[Option[A]] = IsColumn(summonInline[IsColumn[A]].codec.opt)
+  inline given [A: IsColumn]: IsColumn[Option[A]] = ofCodec(summonInline[IsColumn[A]].codec.opt)
 
   inline given [A, B](using inline members: IsColumn[A], inline constraint: Constraint[A, B]): IsColumn[A :| B] =
     val codec: Codec[A :| B] =
       members.codec.eimap(a => a.refineEither[B])((s: A :| B) => s.asInstanceOf[A])
-    IsColumn[A :| B](codec)
+    ofCodec[A :| B](codec)
 
   inline given [B <: Int](using inline constraint: Constraint[String, MaxLength[B]]): IsColumn[String :| MaxLength[B]] =
-    IsColumn(varchar(constValue[B]))
+    ofCodec(varchar(constValue[B]))
       .asInstanceOf[IsColumn[String :| MaxLength[B]]]
 
-  inline given IsColumn[String]         = IsColumn(varchar)
-  inline given IsColumn[Short]          = IsColumn(int2)
-  inline given IsColumn[Int]            = IsColumn(int4)
-  inline given IsColumn[Long]           = IsColumn(int8)
-  inline given IsColumn[Boolean]        = IsColumn(bool)
-  inline given IsColumn[BigDecimal]     = IsColumn(numeric)
-  inline given IsColumn[LocalDate]      = IsColumn(date)
-  inline given IsColumn[LocalDateTime]  = IsColumn(timestamp)
-  inline given IsColumn[OffsetDateTime] = IsColumn(timestamptz)
-  inline given IsColumn[UUID]           = IsColumn(uuid)
-  inline given IsColumn[Array[Byte]]    = IsColumn(bytea)
+  inline given IsColumn[String]         = ofCodec(varchar)
+  inline given IsColumn[Short]          = ofCodec(int2)
+  inline given IsColumn[Int]            = ofCodec(int4)
+  inline given IsColumn[Long]           = ofCodec(int8)
+  inline given IsColumn[Boolean]        = ofCodec(bool)
+  inline given IsColumn[BigDecimal]     = ofCodec(numeric)
+  inline given IsColumn[LocalDate]      = ofCodec(date)
+  inline given IsColumn[LocalDateTime]  = ofCodec(timestamp)
+  inline given IsColumn[OffsetDateTime] = ofCodec(timestamptz)
+  inline given IsColumn[UUID]           = ofCodec(uuid)
+  inline given IsColumn[Array[Byte]]    = ofCodec(bytea)
 
-  inline given IsColumn[Json] = IsColumn(json)
+  inline given IsColumn[Json] = ofCodec(json)

@@ -119,8 +119,8 @@ That's where `IsColumn` trait comes in. An `IsColumn` given states that a type s
 val status: Codec[Status] = ???
 val address: Codec[Address] = ???
 
-inline given IsColumn[Status] = IsColumn(status)
-inline given IsColumn[Address] = IsColumn(address)
+inline given IsColumn[Status] = IsColumn.ofCodec(status)
+inline given IsColumn[Address] = IsColumn.ofCodec(address)
 ```
 
 In a nutshell, `IsColumn` brings `skunk.Codec` into implicit scope and states that the type must be treated as a single column.

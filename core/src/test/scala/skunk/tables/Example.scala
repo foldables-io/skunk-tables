@@ -60,7 +60,7 @@ object Task:
 
     def codec: Codec[Status] = `enum`[Status](_.asString, s => fromString(s).toOption, Type("task_status"))
 
-    inline given IsColumn[Status] = IsColumn.IsColumn(Status.codec)
+    inline given IsColumn[Status] = IsColumn.ofCodec(Status.codec)
 
   val table = Table
     .of[Task]
