@@ -34,7 +34,6 @@ trait TableBuilder[T <: Product]:
 
   /** Union of all column names */
   type ColumnName
-  type Columns <: NonEmptyTuple
 
   type Primary <: Tuple
   type Unique <: Tuple
@@ -45,7 +44,6 @@ trait TableBuilder[T <: Product]:
     new TableBuilder[T]:
       type Name       = N
       type ColumnName = self.ColumnName
-      type Columns    = self.Columns
       type Primary    = self.Primary
       type Unique     = self.Unique
       type Default    = self.Default
@@ -55,7 +53,6 @@ trait TableBuilder[T <: Product]:
     new TableBuilder[T]:
       type Name       = self.Name
       type ColumnName = self.ColumnName
-      type Columns    = self.Columns
       type Primary    = Label *: self.Primary
       type Unique     = self.Unique
       type Default    = self.Default
@@ -65,7 +62,6 @@ trait TableBuilder[T <: Product]:
     new TableBuilder[T]:
       type Name       = self.Name
       type ColumnName = self.ColumnName
-      type Columns    = self.Columns
       type Primary    = self.Primary
       type Unique     = Label *: self.Unique
       type Default    = self.Default
@@ -75,7 +71,6 @@ trait TableBuilder[T <: Product]:
     new TableBuilder[T]:
       type Name       = self.Name
       type ColumnName = self.ColumnName
-      type Columns    = self.Columns
       type Primary    = self.Primary
       type Unique     = self.Unique
       type Default    = Label *: self.Default
@@ -89,16 +84,14 @@ object TableBuilder:
 
     val macroTable = MacroTable.build[T]
 
-    val namesUnion   = macroTable.getNamesUnion.asType
-    val typedColumns = macroTable.getTypedColumns.asTerm.tpe.asType
+    val namesUnion = macroTable.getNamesUnion.asType
 
     val nullableColumns = macroTable.getNullableColumns.asTerm.tpe
 
-    (namesUnion, typedColumns, nullableColumns.asType) match
-      case ('[namesUnion], '[typedColumns], '[nullableColumns]) =>
+    (namesUnion, nullableColumns.asType) match
+      case ('[namesUnion], '[nullableColumns]) =>
         type Init = TableBuilder[T] {
           type ColumnName = namesUnion
-          type Columns    = typedColumns
           type Primary    = EmptyTuple
           type Unique     = EmptyTuple
           type Default    = EmptyTuple
@@ -107,13 +100,13 @@ object TableBuilder:
 
         '{ (new TableBuilder[T] {}).asInstanceOf[Init] }
 
-  extension [P <: Product, N, A, U, D, C, O]
+  extension [P <: Product, N, A, U, D, O]
     (builder: TableBuilder[P] {
-      type Name    = N; type Primary  = A; type Unique = U; type Default = D;
-      type Columns = C; type Nullable = O
+      type Name     = N; type Primary = A; type Unique = U; type Default = D;
+      type Nullable = O
     })
     inline transparent def build: Table[P] =
-      ${ buildImpl[P, N, A, U, D, C, O] }
+      ${ buildImpl[P, N, A, U, D, O] }
 
   /** @tparam P
     *   the product we're describing a table for
@@ -125,12 +118,10 @@ object TableBuilder:
     *   a tuple of names which we'd like to make unique
     * @tparam D
     *   a tuple of names which have defaults for
-    * @tparam C
-    *   a tuple of all column names in the table
     * @tparam O
     *   a tuple of nullable (optional) column names in the table
     */
-  private def buildImpl[P <: Product: Type, N: Type, A: Type, U: Type, D: Type, C: Type, O: Type](using q: Quotes) =
+  private def buildImpl[P <: Product: Type, N: Type, A: Type, U: Type, D: Type, O: Type](using q: Quotes) =
     import quotes.reflect.*
 
     def addConstraint
@@ -147,8 +138,11 @@ object TableBuilder:
     val default  = materializeTuple(TypeRepr.of[D])
     val nullable = materializeTuple(TypeRepr.of[O])
 
+    val initTable   = MacroTable.build[P]
+    val initColumns = initTable.getTypedColumns.asTerm.tpe
+
     val unconstrainedColumns =
-      MacroColumn.InitPhase.fromTypedColumns(TypeRepr.of[C]).map(_.next(tableName))
+      MacroColumn.InitPhase.fromTypedColumns(initColumns).map(_.next(tableName))
 
     val columns = addConstraint(TypedColumn.Constraint.Primary, primary)
       .andThen(addConstraint(TypedColumn.Constraint.Unique, unique))
@@ -156,7 +150,7 @@ object TableBuilder:
       .andThen(addConstraint(TypedColumn.Constraint.Nullable, nullable))
       .apply(unconstrainedColumns)
 
-    val macroTable = MacroTable.build[P].next(columns, tableName)
+    val macroTable = initTable.next(columns, tableName)
 
     val allColumnsSelect = ColumnSelect.buildAllImpl[P](macroTable)
     val getColumnsSelect = ColumnSelect.buildGetImpl[P](macroTable)

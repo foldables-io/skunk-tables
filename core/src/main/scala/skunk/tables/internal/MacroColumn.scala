@@ -55,6 +55,14 @@ object MacroColumn:
                     case Some(isColumn) =>
                       new MacroColumn.InitPhase(q, name, typeRepr, isColumn)
                     case None => report.errorAndAbort(s"Cannot summon IsColumn for ${typeRepr.show}")
+            // When we have `& Singleton`
+            case List(AndType(ConstantType(StringConstant(name)), _), typeRepr, _, _) =>
+              typeRepr.asType match
+                case '[tpe] =>
+                  Expr.summon[IsColumn[tpe]] match
+                    case Some(isColumn) =>
+                      new MacroColumn.InitPhase(q, name, typeRepr, isColumn)
+                    case None => report.errorAndAbort(s"Cannot summon IsColumn for ${typeRepr.show}")
             case _ =>
               report.errorAndAbort(
                 s"Applied types of ${typedColumn.show} don't TypedColumn structure with 4 type holes"

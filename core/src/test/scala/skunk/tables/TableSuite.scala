@@ -126,3 +126,17 @@ object TableSuite:
     CanInsert[PersonNew]
       .into(tableWithMeta)
       .via(columns => (columns.first_name.from(_.firstName), columns.age.from(_.age)))
+
+  // Below doesn't get tested in runtime, compile-time check only
+  import Aux.{TaskId, TaskTitle}
+
+  case class Task(id: TaskId, title: TaskTitle)
+  object Task:
+
+    val table = Table.of[Task].withName("tasks").withPrimary("id").withDefault("id").build
+    case class New(title: TaskTitle)
+
+    given CanInsert[Task.New, Task] =
+      CanInsert[Task.New].into(Task.table).via(columns => Tuple1(columns.title.from(_.title)))
+
+    val result = Task.table.get(_.id == TaskId.example)
