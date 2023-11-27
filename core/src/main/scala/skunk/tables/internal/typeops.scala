@@ -85,8 +85,11 @@ inline def findT[C <: Tuple, Label <: Singleton]: Find[C, Label] =
 /** Pick only `TypedColumns` with certain labels */
 type Pick[Columns <: Tuple, Labels <: Tuple] <: Tuple =
   Labels match
-    case EmptyTuple          => EmptyTuple
-    case IsSingleton[h] *: t => Find[Columns, h] *: Pick[Columns, t]
+    case EmptyTuple =>
+      EmptyTuple
+    case h *: t =>
+      h match
+        case Singleton => Find[Columns, h & Singleton] *: Pick[Columns, t]
 
 inline def pickT[C <: Tuple, Labels <: Tuple]: Pick[C, Labels] =
   inline erasedValue[Labels] match
@@ -97,7 +100,7 @@ type Reify[C <: Tuple] <: Tuple =
   C match
     case EmptyTuple =>
       EmptyTuple
-    case TypedColumn[IsSingleton[n], a, t, c] *: tail =>
+    case TypedColumn[n, a, t, c] *: tail =>
       TypedColumn[n, a, t, c] *: Reify[tail]
 
 // WARNING: it doesn't work if there's a type with given instance not
@@ -107,22 +110,22 @@ inline def reifyT[C <: Tuple]: Reify[C] =
   inline erasedValue[C] match
     case _: EmptyTuple =>
       EmptyTuple
-    case _: (TypedColumn[IsSingleton[n], a, t, c] *: tail) =>
+    case _: (TypedColumn[n, a, t, c] *: tail) =>
       TypedColumn[n, a, t, c](constValue[n], summonInline[IsColumn[a]]) *: reifyT[tail]
 
 type ReifyN[C <: NonEmptyTuple] <: NonEmptyTuple =
   C match
-    case TypedColumn[IsSingleton[n], a, t, c] *: EmptyTuple =>
+    case TypedColumn[n, a, t, c] *: EmptyTuple =>
       TypedColumn[n, a, t, c] *: EmptyTuple
-    case TypedColumn[IsSingleton[n], a, t, c] *: h2 *: tail =>
+    case TypedColumn[n, a, t, c] *: h2 *: tail =>
       TypedColumn[n, a, t, c] *: ReifyN[h2 *: tail]
 
 /** Reify a homogenous tuple of `TypedColumn` */
 inline def reifyNT[C <: NonEmptyTuple]: ReifyN[C] =
   inline erasedValue[C] match
-    case _: (TypedColumn[IsSingleton[n], a, t, c] *: EmptyTuple) =>
+    case _: (TypedColumn[n, a, t, c] *: EmptyTuple) =>
       TypedColumn[n, a, t, c](constValue[n], summonInline[IsColumn[a]]) *: EmptyTuple
-    case _: (TypedColumn[IsSingleton[n], a, t, c] *: h2 *: tail) =>
+    case _: (TypedColumn[n, a, t, c] *: h2 *: tail) =>
       TypedColumn[n, a, t, c](constValue[n], summonInline[IsColumn[a]]) *: reifyNT[h2 *: tail]
 
 type GetNames[C <: Tuple] <: Tuple =
@@ -141,8 +144,12 @@ inline def getNamesT[C <: Tuple]: GetNames[C] =
 
 type GetInNames[I <: NonEmptyTuple] <: NonEmptyTuple =
   I match
-    case TypedColumn.In[IsSingleton[n], ?, ?] *: EmptyTuple => n *: EmptyTuple
-    case TypedColumn.In[IsSingleton[n], ?, ?] *: t          => n *: GetInNames[t]
+    case TypedColumn.In[n, ?, ?] *: EmptyTuple =>
+      n match
+        case Singleton => n *: EmptyTuple
+    case TypedColumn.In[n, ?, ?] *: t =>
+      n match
+        case Singleton => n *: GetInNames[t]
 
 /** Match type to transform `(a, b, c, d)` of `TypedColumn.In` into `(((a, b), c), d)` (or `a ~ b ~
   * c ~ d`)
