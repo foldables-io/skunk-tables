@@ -21,7 +21,7 @@ ThisBuild / scalaVersion := "3.3.3"
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("11"))
 
 // Versions
-lazy val skunk     = "0.6.0"
+lazy val skunk     = "0.6.3"
 lazy val iron      = "2.1.0"
 lazy val quotidian = "0.0.6"
 lazy val munit     = "0.7.29"
