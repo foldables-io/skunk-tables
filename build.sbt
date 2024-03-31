@@ -22,7 +22,7 @@ ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("11"))
 
 // Versions
 lazy val skunk     = "0.6.3"
-lazy val iron      = "2.1.0"
+lazy val iron      = "2.5.0"
 lazy val quotidian = "0.0.6"
 lazy val munit     = "0.7.29"
 lazy val munitCE   = "1.0.7"
