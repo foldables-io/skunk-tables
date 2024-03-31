@@ -267,7 +267,7 @@ There are quite a bit of libraries with overlapping functionality:
 
 ## Copyright and license
 
-The Skunk Tables is copyright 2023 Foldables Ltd.
+The Skunk Tables is copyright 2023-2024 Foldables Ltd.
 
 Licensed under the **[Apache License, Version 2.0][license]** (the "License");
 you may not use this software except in compliance with the License.

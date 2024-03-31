@@ -3,7 +3,7 @@ ThisBuild / tlBaseVersion := "0.0" // your current series x.y
 
 ThisBuild / organization     := "io.foldables"
 ThisBuild / organizationName := "Foldables"
-ThisBuild / startYear        := Some(2023)
+ThisBuild / startYear        := Some(2024)
 ThisBuild / licenses         := Seq(License.Apache2)
 ThisBuild / developers := List(
   // your GitHub handle and name
@@ -16,7 +16,7 @@ ThisBuild / tlSonatypeUseLegacyHost := false
 // publish website from this branch
 ThisBuild / tlSitePublishBranch := Some("main")
 
-ThisBuild / scalaVersion := "3.3.0"
+ThisBuild / scalaVersion := "3.3.3"
 
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("11"))
 
