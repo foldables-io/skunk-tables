@@ -285,7 +285,7 @@ object MacroTable:
               List(NonEmptyList(elem.label, root).reverse -> (elem.typeRepr, p))
             case None =>
               MacroMirror.summon[t] match
-                case Some(pm: MacroMirror.ProductMacroMirror[quotes.type, t]) =>
+                case Some(pm: MacroMirror.Product[quotes.type, t]) =>
                   flattenProduct[t](elem.label :: root)(pm.elems)
                 case _ =>
                   quotes.reflect.report.errorAndAbort(
