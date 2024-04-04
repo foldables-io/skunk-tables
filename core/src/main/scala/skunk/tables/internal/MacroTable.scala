@@ -17,15 +17,12 @@
 package skunk.tables.internal
 
 import java.rmi.server.ServerNotActiveException
-
 import scala.deriving.Mirror
 import scala.Singleton as SSingleton
 import scala.quoted.*
-
 import cats.data.NonEmptyList
-
 import quotidian.{MacroMirror, MirrorElem}
-
+import skunk.tables.ast.{Select, TableH}
 import skunk.tables.{IsColumn, TypedColumn}
 
 /** MacroTable is a class containing all information necessary for `Table` synthezis. It can be of
@@ -86,7 +83,61 @@ sealed trait MacroTable[Q <: Quotes & Singleton, A]:
 
 object MacroTable:
 
-  /** Init phase is when `TableBuilder` knows only information derived from `A` type
+  import skunk.tables.ast
+
+  extension [T <: ast.Select.SelectH](select: T)
+    transparent inline def where[F](inline f: F) =
+      ${ whereImpl[T, F]('{f}) }
+
+  private def whereImpl[T: Type, F: Type](f: Expr[F])(using Quotes) =
+    import quotes.reflect.*
+
+    (Type.of[T], f.asTerm) match
+      case ('[ast.Select.SelectH { type Columns = cols; type From = from }], Inlined(_, _, Literal(constant))) =>
+        ConstantType(constant).asType match
+          case '[where] =>
+            mkSelectH[cols, false, from, where]
+      case ('[ast.Select.SelectH { type Columns = cols; type From = from }], f) =>
+        println(TypeRepr.of[from].widen.dealias.simplified.show)
+        println(f)
+        ???
+
+  inline transparent def select[F, N, C](inline f: F) =
+    ${ selectImpl[F, N, C] }
+
+  private def selectImpl[F: Type, N: Type, C: Type](using Quotes) =
+    import quotes.reflect.*
+
+
+    val fromType = (TypeRepr.of[C].dealias.asType, Type.of[N]) match
+      case ('[columns], '[name]) =>
+        val expr = '{
+          new TableH { }.asInstanceOf[TableH {
+            type NameH = name
+            type ColumnsH = columns
+          }]
+        }
+        expr.asTerm.tpe.asType
+
+    (Type.of[F], fromType) match
+      case ('[Function1[?, cols]], '[from]) =>
+        mkSelectH[cols, false, from, Nothing]
+
+
+  private def mkSelectH[C: Type, D: Type, F: Type, W: Type](using Quotes) =
+    import quotes.reflect.*
+
+    '{
+      new ast.Select.SelectH { }.asInstanceOf[ast.Select.SelectH {
+        type Columns = C
+        type Distinct = D
+        type From = F
+        type Where = W
+      }]
+    }
+
+
+/** Init phase is when `TableBuilder` knows only information derived from `A` type
     *
     * @param columnMap
     *   an ordered list of columns, where key is column name, value is a pair of `TypeRepr` of that
@@ -135,7 +186,7 @@ object MacroTable:
     def columnMap = columns.map(c => c.name -> c.tpe.asInstanceOf[TypeRepr])
 
     /** Get a tuple of fully-typed constraints for a particular column */
-    def getConstraints(label: String): quotes.reflect.TypeRepr =
+    def getConstraints(label: String): TypeRepr =
       columns.find(column => column.name == label) match
         case Some(column) =>
           MacroColumn.constraintsTuple(quotes)(column.constraints)
@@ -285,7 +336,7 @@ object MacroTable:
               List(NonEmptyList(elem.label, root).reverse -> (elem.typeRepr, p))
             case None =>
               MacroMirror.summon[t] match
-                case Some(pm: MacroMirror.ProductMacroMirror[quotes.type, t]) =>
+                case Some(pm: MacroMirror.Product[quotes.type, t]) =>
                   flattenProduct[t](elem.label :: root)(pm.elems)
                 case _ =>
                   quotes.reflect.report.errorAndAbort(

@@ -23,7 +23,7 @@ import cats.data.NonEmptyList
 
 import quotidian.{MacroMirror, MirrorElem}
 
-import skunk.tables.internal.{MacroTable, Constants, MacroColumn}
+import skunk.tables.internal.{MacroTable, MacroColumn}
 
 /** `Columns` is a "selectable" trait, which means the members of it are created dynamically at
   * compile-time. Every member maps a member of case class (`T` param from `Table[T]`) into a

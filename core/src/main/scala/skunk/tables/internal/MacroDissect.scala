@@ -88,7 +88,7 @@ object MacroDissect:
     import quotes.reflect.*
 
     MacroMirror.summon[T] match
-      case Some(pm: MacroMirror.ProductMacroMirror[quotes.type, T]) =>
+      case Some(pm: MacroMirror.Product[quotes.type, T]) =>
         val nested = pm.elemTypes.map { case '[tpe] =>
           Expr.summon[IsColumn[tpe]] match
             case Some(_) => None

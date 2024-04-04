@@ -104,6 +104,12 @@ object TableSuite:
   case class Person(id: Long, firstName: String, age: Int)
   val table = Table.of[Person].withName("persons").build
 
+  import skunk.tables.internal.MacroTable.*
+
+  val col1: TypedColumn["wrong", Int, "not_persons", EmptyTuple] = TypedColumn("wrong", IsColumn[Int])
+  val select = table.next.sel(x => (x.id, x.age))
+  val selectWhere = select.where((x: Int) => x.toString)
+
   case class PersonNew(id: Int, firstName: String, age: Int)
 
   val in = CanInsert[PersonNew].into(table)

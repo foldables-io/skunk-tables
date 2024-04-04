@@ -23,7 +23,7 @@ ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("11"))
 // Versions
 lazy val skunk     = "0.6.3"
 lazy val iron      = "2.5.0"
-lazy val quotidian = "0.0.6"
+lazy val quotidian = "0.0.14"
 lazy val munit     = "0.7.29"
 lazy val munitCE   = "1.0.7"
 
@@ -42,5 +42,22 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
                                         "org.typelevel"        %% "munit-cats-effect-3" % munitCE % Test
             )
   )
+
+lazy val next = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("next"))
+  .settings(name := "skunk-tables-next",
+    libraryDependencies ++=
+      Seq(
+        "org.tpolecat"         %% "skunk-core"          % skunk,
+        "org.tpolecat"         %% "skunk-circe"         % skunk,
+        "io.github.iltotore"   %% "iron"                % iron,
+        "io.github.iltotore"   %% "iron-circe"          % iron,
+        "io.github.kitlangton" %% "quotidian"           % quotidian,
+        "org.scalameta"        %% "munit"               % munit   % Test,
+        "org.typelevel"        %% "munit-cats-effect-3" % munitCE % Test
+      )
+  )
+
 
 lazy val docs = project.in(file("site")).enablePlugins(TypelevelSitePlugin)
