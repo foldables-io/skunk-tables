@@ -43,4 +43,21 @@ lazy val core = crossProject(JVMPlatform, JSPlatform)
             )
   )
 
+lazy val next = crossProject(JVMPlatform, JSPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("next"))
+  .settings(name := "skunk-tables-next",
+    libraryDependencies ++=
+      Seq(
+        "org.tpolecat"         %% "skunk-core"          % skunk,
+        "org.tpolecat"         %% "skunk-circe"         % skunk,
+        "io.github.iltotore"   %% "iron"                % iron,
+        "io.github.iltotore"   %% "iron-circe"          % iron,
+        "io.github.kitlangton" %% "quotidian"           % quotidian,
+        "org.scalameta"        %% "munit"               % munit   % Test,
+        "org.typelevel"        %% "munit-cats-effect-3" % munitCE % Test
+      )
+  )
+
+
 lazy val docs = project.in(file("site")).enablePlugins(TypelevelSitePlugin)

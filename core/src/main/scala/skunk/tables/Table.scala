@@ -19,11 +19,9 @@ package skunk.tables
 import scala.annotation.tailrec
 import scala.language.implicitConversions
 import scala.quoted.*
-
 import skunk.{Codec, Decoder, Fragment, Void}
 import skunk.implicits.*
-
-import skunk.tables.internal.{TableBuilder, TwiddleTCN}
+import skunk.tables.internal.{MacroTable, TableBuilder, TwiddleTCN}
 
 /** `Table` is the core entity for skunk-tables API. It links a product type `T` to a Postgres table
   * with specific name and constraints and provides several utility methods to query that table in a
@@ -43,7 +41,9 @@ trait Table[T <: Product]:
   /** Table name */
   def name: Table.Name
 
-  /** Union type of all coumn names */
+  type Name
+
+  /** Union type of all column names */
   type ColumnName
 
   /** Flat tuple of Scala types used in columns */
@@ -92,13 +92,32 @@ trait Table[T <: Product]:
 
   /** All column names, in their order */
   def getColumnNames: List[ColumnName] =
-    getColumns.map(_.n.toString).asInstanceOf[List[ColumnName]]
+    getColumns.map(_.n).asInstanceOf[List[ColumnName]]
 
   override def toString: String =
     s"Table($name, $select)"
 
   private def getColumns: List[TypedColumn[?, ?, ?, ?]] =
     typedColumns.toList.asInstanceOf[List[TypedColumn[?, ?, ?, ?]]]
+
+  // NEXT
+
+  import skunk.tables.ast.TableH
+  import scala.compiletime.ops.boolean.&&
+
+  type AllSubtypesOfMatch[T <: Tuple, Super] <: Boolean = T match
+    case EmptyTuple => true
+    case h *: t =>
+      h match
+        case Super => AllSubtypesOfMatch[t, Super]
+
+  type AllSubtypesOf[T <: Tuple, Super] = AllSubtypesOfMatch[T, Super] =:= true
+
+  type MyColumns[T <: Tuple] = AllSubtypesOf[T, TypedColumn[?, ?, Name, ?]]
+
+  object next:
+    transparent inline def sel[Cols <: Tuple: MyColumns](q: Select => Cols) =
+      MacroTable.select[q.type, Name, TypedColumns](q)
 
   /** Lower-level API to work with `Fragment` */
   object low:

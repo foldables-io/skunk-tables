@@ -165,12 +165,14 @@ object TableBuilder:
 
     (allColumnsSelect.asTerm.tpe.asType,
      getColumnsSelect.asTerm.tpe.asType,
+//     Type.of[N],
      namesUnion.asType,
      mTypedColumns.asTerm.tpe.asType,
      macroDissect.outType) match
       case ('[allSelectType], '[getSelectType], '[namesUnion], '[typedColumnsType], '[dissectOutType]) =>
         type Final = Table[P] {
           type TypedColumns = typedColumnsType
+          type Name         = N
           type Select       = allSelectType
           type SelectGet    = getSelectType
           type ColumnName   = namesUnion
